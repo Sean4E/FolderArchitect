@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } = require
 const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let tray = null;
@@ -11,6 +12,70 @@ let wsClients = new Set();
 // WebSocket server settings (configurable)
 let wsPort = 9876;
 let wsIdentifier = 'folder-architect-default';
+
+// ========== AUTO UPDATER ==========
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
+function setupAutoUpdater() {
+    autoUpdater.on('checking-for-update', () => {
+        console.log('Checking for updates...');
+    });
+
+    autoUpdater.on('update-available', (info) => {
+        console.log('Update available:', info.version);
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Update Available',
+            message: `A new version (${info.version}) is available!`,
+            detail: 'Would you like to download it now?',
+            buttons: ['Download', 'Later'],
+            defaultId: 0
+        }).then(result => {
+            if (result.response === 0) {
+                autoUpdater.downloadUpdate();
+                mainWindow.webContents.send('update-status', { status: 'downloading', version: info.version });
+            }
+        });
+    });
+
+    autoUpdater.on('update-not-available', () => {
+        console.log('No updates available');
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+        mainWindow.webContents.send('update-status', {
+            status: 'progress',
+            percent: Math.round(progress.percent)
+        });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        console.log('Update downloaded:', info.version);
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Update Ready',
+            message: 'Update downloaded!',
+            detail: 'The update will be installed when you restart the app. Restart now?',
+            buttons: ['Restart Now', 'Later'],
+            defaultId: 0
+        }).then(result => {
+            if (result.response === 0) {
+                autoUpdater.quitAndInstall();
+            }
+        });
+    });
+
+    autoUpdater.on('error', (err) => {
+        console.error('Auto-updater error:', err);
+    });
+}
+
+function checkForUpdates() {
+    autoUpdater.checkForUpdates().catch(err => {
+        console.log('Update check failed:', err.message);
+    });
+}
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -158,6 +223,20 @@ function createMenu() {
         {
             label: 'Help',
             submenu: [
+                {
+                    label: 'Check for Updates...',
+                    click: () => {
+                        checkForUpdates();
+                        dialog.showMessageBox(mainWindow, {
+                            type: 'info',
+                            title: 'Checking for Updates',
+                            message: 'Checking for updates...',
+                            detail: 'You will be notified if an update is available.',
+                            buttons: ['OK']
+                        });
+                    }
+                },
+                { type: 'separator' },
                 {
                     label: 'About Folder Architect',
                     click: () => showAbout()
@@ -469,6 +548,14 @@ ipcMain.on('send-templates', (event, templates) => {
 
 app.whenReady().then(() => {
     createWindow();
+
+    // Setup auto-updater
+    setupAutoUpdater();
+
+    // Check for updates after a short delay (don't block startup)
+    setTimeout(() => {
+        checkForUpdates();
+    }, 3000);
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

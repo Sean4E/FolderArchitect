@@ -1,16 +1,21 @@
 {
   "name": "folder-architect",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Powerful folder structure builder - Create any folder structure with infinite subfolders",
   "main": "main.js",
   "author": "4E",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sean4E/FolderArchitect.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64",
     "build:installer": "electron-builder --win nsis --x64",
+    "publish": "electron-builder --win --x64 --publish always",
     "set-icon": "node_modules\\rcedit\\bin\\rcedit-x64.exe release\\win-unpacked\\\"Folder Architect.exe\" --set-icon assets\\icon.ico && node_modules\\rcedit\\bin\\rcedit-x64.exe release\\FolderArchitect-Portable-1.0.0.exe --set-icon assets\\icon.ico"
   },
   "build": {
@@ -20,6 +25,11 @@
     "directories": {
       "output": "release",
       "buildResources": "assets"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Sean4E",
+      "repo": "FolderArchitect"
     },
     "win": {
       "target": [
@@ -83,6 +93,7 @@
     "to-ico": "^1.1.5"
   },
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "ws": "^8.14.2"
   }
 }
