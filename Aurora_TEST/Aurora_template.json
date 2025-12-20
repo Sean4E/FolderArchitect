@@ -1,0 +1,49 @@
+{
+  "name": "Aurora",
+  "description": "",
+  "structure": [
+    {
+      "name": "Phoenix",
+      "children": []
+    },
+    {
+      "name": "YaoGuai",
+      "children": []
+    },
+    {
+      "name": "BlueBird",
+      "children": []
+    },
+    {
+      "name": "FloodDragon",
+      "children": []
+    },
+    {
+      "name": "XieZhi",
+      "children": []
+    },
+    {
+      "name": "TianGou",
+      "children": []
+    },
+    {
+      "name": "Warrior",
+      "children": []
+    },
+    {
+      "name": "NianBeast",
+      "children": []
+    },
+    {
+      "name": "TaoTie",
+      "children": []
+    }
+  ],
+  "settings": {
+    "prefix": "",
+    "suffix": "",
+    "separator": "_",
+    "caseStyle": "original",
+    "autoNumber": true
+  }
+}

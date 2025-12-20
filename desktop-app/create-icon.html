@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #6366f1;
+            border-radius: 20px;
+            margin: 20px;
+        }
+        .instructions {
+            max-width: 600px;
+            margin: 20px auto;
+            text-align: left;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        a {
+            color: #6366f1;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #5558e3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Folder Architect Icon</h1>
+
+    <canvas id="icon256" width="256" height="256"></canvas>
+
+    <br>
+
+    <button onclick="downloadPNG()">Download PNG (256x256)</button>
+    <button onclick="downloadICO()">Download as ICO</button>
+
+    <div class="instructions">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Click "Download PNG" to save the icon</li>
+            <li>Save it to the <code>desktop-app/assets/</code> folder as <code>icon.png</code></li>
+            <li>To create an ICO file, use an online converter like:
+                <a href="https://convertico.com/" target="_blank">ConvertICO.com</a></li>
+            <li>Save the ICO file as <code>icon.ico</code> in the same folder</li>
+        </ol>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const scale = size / 512;
+
+            // Background
+            const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+            bgGrad.addColorStop(0, '#1a1a2e');
+            bgGrad.addColorStop(1, '#0a0a0f');
+
+            // Rounded rectangle background
+            ctx.beginPath();
+            const radius = 80 * scale;
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fillStyle = bgGrad;
+            ctx.fill();
+
+            // Decorative circles
+            ctx.beginPath();
+            ctx.arc(100 * scale, 100 * scale, 150 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(412 * scale, 412 * scale, 120 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.06)';
+            ctx.fill();
+
+            // Folder gradient
+            const folderGrad = ctx.createLinearGradient(0, 0, size, size);
+            folderGrad.addColorStop(0, '#fbbf24');
+            folderGrad.addColorStop(1, '#f59e0b');
+
+            // Back folder (shadow)
+            ctx.beginPath();
+            ctx.moveTo(100 * scale, 180 * scale);
+            ctx.lineTo(100 * scale, 380 * scale);
+            ctx.quadraticCurveTo(100 * scale, 407 * scale, 127 * scale, 407 * scale);
+            ctx.lineTo(385 * scale, 407 * scale);
+            ctx.quadraticCurveTo(412 * scale, 407 * scale, 412 * scale, 380 * scale);
+            ctx.lineTo(412 * scale, 200 * scale);
+            ctx.quadraticCurveTo(412 * scale, 173 * scale, 385 * scale, 173 * scale);
+            ctx.lineTo(270 * scale, 173 * scale);
+            ctx.lineTo(240 * scale, 143 * scale);
+            ctx.lineTo(127 * scale, 135 * scale);
+            ctx.quadraticCurveTo(100 * scale, 135 * scale, 100 * scale, 162 * scale);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.4)';
+            ctx.fill();
+
+            // Main folder
+            ctx.beginPath();
+            ctx.moveTo(80 * scale, 200 * scale);
+            ctx.lineTo(80 * scale, 400 * scale);
+            ctx.quadraticCurveTo(80 * scale, 436 * scale, 116 * scale, 436 * scale);
+            ctx.lineTo(396 * scale, 436 * scale);
+            ctx.quadraticCurveTo(432 * scale, 436 * scale, 432 * scale, 400 * scale);
+            ctx.lineTo(432 * scale, 220 * scale);
+            ctx.quadraticCurveTo(432 * scale, 184 * scale, 396 * scale, 184 * scale);
+            ctx.lineTo(260 * scale, 184 * scale);
+            ctx.lineTo(225 * scale, 149 * scale);
+            ctx.lineTo(116 * scale, 138 * scale);
+            ctx.quadraticCurveTo(80 * scale, 138 * scale, 80 * scale, 174 * scale);
+            ctx.closePath();
+            ctx.fillStyle = folderGrad;
+            ctx.fill();
+
+            // Folder highlight
+            ctx.beginPath();
+            ctx.moveTo(80 * scale, 200 * scale);
+            ctx.lineTo(80 * scale, 220 * scale);
+            ctx.lineTo(260 * scale, 184 * scale);
+            ctx.lineTo(225 * scale, 149 * scale);
+            ctx.lineTo(116 * scale, 138 * scale);
+            ctx.quadraticCurveTo(80 * scale, 138 * scale, 80 * scale, 174 * scale);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fill();
+
+            // Accent gradient for lines
+            const accentGrad = ctx.createLinearGradient(0, 0, size, size);
+            accentGrad.addColorStop(0, '#6366f1');
+            accentGrad.addColorStop(1, '#4f46e5');
+
+            // Structure lines
+            ctx.strokeStyle = accentGrad;
+            ctx.lineWidth = 4 * scale;
+            ctx.lineCap = 'round';
+
+            // Vertical line
+            ctx.beginPath();
+            ctx.moveTo(140 * scale, 270 * scale);
+            ctx.lineTo(140 * scale, 370 * scale);
+            ctx.stroke();
+
+            // Horizontal lines
+            ctx.beginPath();
+            ctx.moveTo(140 * scale, 290 * scale);
+            ctx.lineTo(180 * scale, 290 * scale);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(140 * scale, 330 * scale);
+            ctx.lineTo(180 * scale, 330 * scale);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(140 * scale, 370 * scale);
+            ctx.lineTo(180 * scale, 370 * scale);
+            ctx.stroke();
+
+            // Sub-hierarchy
+            ctx.beginPath();
+            ctx.moveTo(200 * scale, 290 * scale);
+            ctx.lineTo(200 * scale, 310 * scale);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(200 * scale, 310 * scale);
+            ctx.lineTo(230 * scale, 310 * scale);
+            ctx.stroke();
+
+            // Small folder icons
+            ctx.fillStyle = accentGrad;
+
+            // First mini folder
+            drawMiniFolder(ctx, 185 * scale, 278 * scale, 40 * scale, 24 * scale);
+            drawMiniFolder(ctx, 185 * scale, 318 * scale, 40 * scale, 24 * scale);
+            drawMiniFolder(ctx, 185 * scale, 358 * scale, 40 * scale, 24 * scale);
+            drawMiniFolder(ctx, 235 * scale, 298 * scale, 35 * scale, 22 * scale);
+
+            // Plus button
+            ctx.beginPath();
+            ctx.arc(380 * scale, 380 * scale, 45 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = accentGrad;
+            ctx.fill();
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 6 * scale;
+            ctx.beginPath();
+            ctx.moveTo(380 * scale, 355 * scale);
+            ctx.lineTo(380 * scale, 405 * scale);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(355 * scale, 380 * scale);
+            ctx.lineTo(405 * scale, 380 * scale);
+            ctx.stroke();
+        }
+
+        function drawMiniFolder(ctx, x, y, w, h) {
+            // Folder body
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, 4);
+            ctx.fill();
+
+            // Folder tab
+            ctx.beginPath();
+            ctx.moveTo(x, y + 4);
+            ctx.lineTo(x, y);
+            ctx.quadraticCurveTo(x, y - 2, x + 4, y - 2);
+            ctx.lineTo(x + w * 0.3, y - 2);
+            ctx.lineTo(x + w * 0.4, y + 2);
+            ctx.lineTo(x + w - 4, y + 2);
+            ctx.quadraticCurveTo(x + w, y + 2, x + w, y + 6);
+            ctx.fill();
+        }
+
+        function downloadPNG() {
+            const canvas = document.getElementById('icon256');
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadICO() {
+            alert('To create an ICO file:\n\n1. Download the PNG first\n2. Go to https://convertico.com/\n3. Upload the PNG and convert to ICO\n4. Save as icon.ico in the assets folder');
+        }
+
+        // Draw the icon on page load
+        drawIcon(document.getElementById('icon256'));
+    </script>
+</body>
+</html>

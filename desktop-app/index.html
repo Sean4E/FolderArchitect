@@ -1,0 +1,3012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+    <title>Folder Architect | Structure Builder</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="icon" type="image/x-icon" href="assets/icon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: rgba(20, 20, 30, 0.85);
+            --bg-hover: rgba(40, 40, 60, 0.6);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.15);
+            --text: #e8e8f0;
+            --text-dim: #8888a0;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.3);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --folder: #fbbf24;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(251, 191, 36, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 320px 1fr 360px;
+            gap: 20px;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 1200px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 40px);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.7;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-light) transparent;
+        }
+
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
+        }
+
+        /* WebSocket Status Indicator */
+        .ws-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .ws-status.connected {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .ws-status.disconnected {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .ws-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .ws-status.connected .ws-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Templates Panel */
+        .template-card {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: var(--accent);
+            transform: translateX(4px);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .template-card.custom {
+            border-style: dashed;
+        }
+
+        .template-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .template-name svg {
+            width: 16px;
+            height: 16px;
+            color: var(--folder);
+        }
+
+        .template-desc {
+            font-size: 12px;
+            color: var(--text-dim);
+            line-height: 1.4;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .template-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .template-badge.custom {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        /* Builder Panel */
+        .builder-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .project-name-input {
+            flex: 1;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .project-name-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-hover);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            border-color: var(--border-light);
+            background: rgba(60, 60, 80, 0.6);
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: #5558e3;
+            border-color: #5558e3;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #0ea572;
+            border-color: #0ea572;
+            box-shadow: 0 0 20px var(--success-glow);
+        }
+
+        .btn-danger {
+            background: transparent;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .btn-sm svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-icon {
+            padding: 10px;
+            width: 40px;
+            height: 40px;
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, var(--success), #059669);
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 14px 24px;
+            box-shadow: 0 4px 20px var(--success-glow);
+        }
+
+        .btn-create:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px var(--success-glow);
+        }
+
+        .btn-create:active {
+            transform: translateY(0);
+        }
+
+        /* Folder Tree */
+        .folder-tree {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .folder-item {
+            position: relative;
+            user-select: none;
+        }
+
+        .folder-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .folder-row:hover {
+            background: var(--bg-hover);
+        }
+
+        .folder-row.selected {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            margin: -1px;
+        }
+
+        .folder-row.drag-over {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px dashed var(--success);
+            margin: -1px;
+        }
+
+        .folder-toggle {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .folder-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .folder-toggle svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s;
+        }
+
+        .folder-toggle.collapsed svg {
+            transform: rotate(-90deg);
+        }
+
+        .folder-toggle.empty {
+            visibility: hidden;
+        }
+
+        .folder-icon {
+            width: 18px;
+            height: 18px;
+            color: var(--folder);
+            flex-shrink: 0;
+        }
+
+        .folder-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .folder-name-input {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .folder-name-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .folder-count {
+            font-size: 11px;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .folder-actions {
+            display: none;
+            gap: 4px;
+        }
+
+        .folder-row:hover .folder-actions {
+            display: flex;
+        }
+
+        .folder-action {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .folder-action:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        .folder-action.delete:hover {
+            color: var(--danger);
+        }
+
+        .folder-action svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .folder-children {
+            margin-left: 20px;
+            padding-left: 12px;
+            border-left: 1px solid var(--border);
+        }
+
+        .folder-children.collapsed {
+            display: none;
+        }
+
+        /* Add Folder Button */
+        .add-folder-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            margin-top: 10px;
+            border: 1px dashed var(--border-light);
+            border-radius: var(--radius-sm);
+            background: transparent;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .add-folder-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .add-folder-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Settings Panel */
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            font-size: 13px;
+        }
+
+        /* Export Section */
+        .export-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .export-btn {
+            padding: 12px;
+            text-align: center;
+        }
+
+        .export-btn span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Preview Section */
+        .preview-box {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 180px;
+            overflow-y: auto;
+            white-space: pre;
+            color: var(--text-dim);
+        }
+
+        .preview-box .folder-line {
+            color: var(--folder);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        .toast svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast.success svg {
+            color: var(--success);
+        }
+
+        .toast.error svg {
+            color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            color: var(--text-dim);
+            opacity: 0.3;
+            margin-bottom: 16px;
+        }
+
+        .empty-state p {
+            color: var(--text-dim);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            background: var(--border);
+            margin: 0 4px;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            padding: 12px;
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+        }
+
+        .stat {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Drag Ghost */
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 3000;
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .drag-ghost.active {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drag-ghost svg {
+            width: 16px;
+            height: 16px;
+            color: var(--folder);
+        }
+
+        /* Header Logo */
+        .logo {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(20px);
+        }
+
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            color: var(--folder);
+        }
+
+        .logo-text {
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-sub {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                display: none;
+            }
+        }
+
+        /* Create Action Section */
+        .create-action {
+            padding: 16px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+        }
+
+        .create-action .settings-title {
+            color: var(--success);
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <div>
+            <div class="logo-text">Folder Architect</div>
+            <div class="logo-sub">Desktop</div>
+        </div>
+    </div>
+
+    <div class="app">
+        <!-- Templates Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    Templates
+                </div>
+                <div class="ws-status disconnected" id="wsStatus">
+                    <span class="ws-dot"></span>
+                    <span>Offline</span>
+                </div>
+            </div>
+            <div class="panel-content" id="templatesPanel">
+                <!-- Templates will be populated by JS -->
+            </div>
+            <div style="padding-top: 12px; border-top: 1px solid var(--border); margin-top: auto; display: flex; gap: 8px;">
+                <button class="btn btn-sm" onclick="exportSavedTemplates()" title="Export your saved templates to a file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export
+                </button>
+                <button class="btn btn-sm" onclick="document.getElementById('importTemplatesFile').click()" title="Import templates from a file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Import
+                </button>
+                <input type="file" id="importTemplatesFile" accept=".json" style="display:none" onchange="importSavedTemplates(event)">
+            </div>
+        </div>
+
+        <!-- Builder Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    Structure Builder
+                </div>
+            </div>
+
+            <div class="builder-header">
+                <input type="text" class="project-name-input" id="projectName" placeholder="Project Name" value="My Project">
+                <button class="btn btn-primary" onclick="saveAsTemplate()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save Template
+                </button>
+            </div>
+
+            <div class="toolbar">
+                <button class="btn btn-sm" onclick="addRootFolder()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Add Folder
+                </button>
+                <button class="btn btn-sm" onclick="expandAll()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="7 13 12 18 17 13"/>
+                        <polyline points="7 6 12 11 17 6"/>
+                    </svg>
+                    Expand All
+                </button>
+                <button class="btn btn-sm" onclick="collapseAll()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="17 11 12 6 7 11"/>
+                        <polyline points="17 18 12 13 7 18"/>
+                    </svg>
+                    Collapse
+                </button>
+                <div class="toolbar-divider"></div>
+                <button class="btn btn-sm btn-danger" onclick="clearAll()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                    Clear
+                </button>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat">
+                    <div class="stat-value" id="folderCount">0</div>
+                    <div class="stat-label">Folders</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="depthCount">0</div>
+                    <div class="stat-label">Max Depth</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="templateCount">0</div>
+                    <div class="stat-label">Templates</div>
+                </div>
+            </div>
+
+            <div class="panel-content">
+                <div class="folder-tree" id="folderTree">
+                    <!-- Folder tree will be rendered here -->
+                </div>
+                <button class="add-folder-btn" onclick="addRootFolder()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Add Root Folder
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings & Export Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
+                    </svg>
+                    Settings & Export
+                </div>
+            </div>
+            <div class="panel-content">
+                <!-- CREATE FOLDERS ACTION -->
+                <div class="create-action">
+                    <div class="settings-title">Create Folders</div>
+
+                    <!-- Destination Folder -->
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label class="input-label">Destination Folder</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" class="input-field" id="destinationPath" placeholder="Click Browse to select..." readonly style="flex:1; cursor:pointer;" onclick="selectDestination()">
+                            <button class="btn" onclick="selectDestination()" style="white-space:nowrap;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                Browse
+                            </button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-create" onclick="createFoldersNow()" style="width:100%">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            <line x1="12" y1="11" x2="12" y2="17"/>
+                            <line x1="9" y1="14" x2="15" y2="14"/>
+                        </svg>
+                        Create Folder Structure
+                    </button>
+                    <p id="createStatus" style="font-size:11px; color:var(--text-dim); margin-top:8px; text-align:center;">
+                        Select a destination, then click to create all folders instantly
+                    </p>
+                </div>
+
+                <!-- Naming Settings -->
+                <div class="settings-section">
+                    <div class="settings-title">Naming Convention</div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label class="input-label">Global Prefix</label>
+                            <input type="text" class="input-field" id="globalPrefix" placeholder="e.g., 01_, PRJ_">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Global Suffix</label>
+                            <input type="text" class="input-field" id="globalSuffix" placeholder="e.g., _v1, _2024">
+                        </div>
+                    </div>
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="autoNumber">
+                        <span class="checkbox-label">Auto-number folders (01_, 02_, ...)</span>
+                    </label>
+                </div>
+
+                <!-- Separator Settings -->
+                <div class="settings-section">
+                    <div class="settings-title">Separator Style</div>
+                    <div class="input-group">
+                        <select class="input-field" id="separatorStyle">
+                            <option value="_">Underscore (folder_name)</option>
+                            <option value="-">Hyphen (folder-name)</option>
+                            <option value=" ">Space (folder name)</option>
+                            <option value=".">Dot (folder.name)</option>
+                            <option value="">None (foldername)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Case Settings -->
+                <div class="settings-section">
+                    <div class="settings-title">Case Style</div>
+                    <div class="input-group">
+                        <select class="input-field" id="caseStyle">
+                            <option value="original">Original</option>
+                            <option value="lowercase">lowercase</option>
+                            <option value="uppercase">UPPERCASE</option>
+                            <option value="capitalize">Title Case</option>
+                            <option value="camel">camelCase</option>
+                            <option value="pascal">PascalCase</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="settings-section">
+                    <div class="settings-title">Preview</div>
+                    <div class="preview-box" id="previewBox">
+                        <!-- Preview will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="settings-section">
+                    <div class="settings-title">Export As</div>
+                    <div class="export-buttons">
+                        <button class="btn export-btn" onclick="exportJSON()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                            </svg>
+                            <span>JSON Template</span>
+                        </button>
+                        <button class="btn export-btn" onclick="exportText()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <span>Text Tree</span>
+                        </button>
+                        <button class="btn export-btn" onclick="exportBatch()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                            <span>Windows .bat</span>
+                        </button>
+                        <button class="btn export-btn" onclick="exportShell()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                                <polyline points="4 17 10 11 4 5"/>
+                                <line x1="12" y1="19" x2="20" y2="19"/>
+                            </svg>
+                            <span>Mac/Linux .sh</span>
+                        </button>
+                        <button class="btn export-btn btn-success" onclick="copyToClipboard()" style="grid-column: span 2">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            <span>Copy Structure to Clipboard</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Import -->
+                <div class="settings-section">
+                    <div class="settings-title">Import</div>
+                    <button class="btn" onclick="document.getElementById('importFile').click()" style="width:100%">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Import JSON Template
+                    </button>
+                    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Template Modal -->
+    <div class="modal-overlay" id="saveModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Save as Template</div>
+                <button class="modal-close" onclick="closeSaveModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Template Name</label>
+                    <input type="text" class="input-field" id="templateName" placeholder="e.g., Video Production">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Description</label>
+                    <input type="text" class="input-field" id="templateDesc" placeholder="e.g., Standard video project structure">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmSaveTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Drag Ghost -->
+    <div class="drag-ghost" id="dragGhost">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span id="dragGhostText"></span>
+    </div>
+
+    <script>
+        // ===== DATA =====
+        let folderStructure = [];
+        let customTemplates = [];
+        let selectedFolderId = null;
+        let draggedItem = null;
+
+        // Check if running in Electron
+        const isElectron = window.electronAPI !== undefined;
+
+        // Built-in Templates - Comprehensive Professional Collection
+        const builtInTemplates = [
+            {
+                id: 'film-production',
+                name: 'Film / Video Production',
+                description: 'Pre-production through post and delivery',
+                icon: '🎬',
+                structure: [
+                    { name: '01_Pre-Production', children: [
+                        { name: 'Scripts', children: [
+                            { name: 'Drafts', children: [] },
+                            { name: 'Final', children: [] }
+                        ]},
+                        { name: 'Storyboards', children: [] },
+                        { name: 'Shotlists', children: [] },
+                        { name: 'Schedules', children: [] },
+                        { name: 'Casting', children: [] },
+                        { name: 'Locations', children: [
+                            { name: 'Scouting_Photos', children: [] },
+                            { name: 'Permits', children: [] }
+                        ]}
+                    ]},
+                    { name: '02_Production', children: [
+                        { name: 'Footage', children: [
+                            { name: 'Camera_A', children: [] },
+                            { name: 'Camera_B', children: [] },
+                            { name: 'BTS', children: [] },
+                            { name: 'Drone', children: [] }
+                        ]},
+                        { name: 'Audio', children: [
+                            { name: 'Dialogue', children: [] },
+                            { name: 'Ambient', children: [] },
+                            { name: 'SFX', children: [] }
+                        ]},
+                        { name: 'Photos', children: [] },
+                        { name: 'Daily_Logs', children: [] }
+                    ]},
+                    { name: '03_Post-Production', children: [
+                        { name: 'Projects', children: [
+                            { name: 'Premiere', children: [] },
+                            { name: 'DaVinci', children: [] },
+                            { name: 'After_Effects', children: [] }
+                        ]},
+                        { name: 'Edits', children: [
+                            { name: 'Rough_Cuts', children: [] },
+                            { name: 'Fine_Cuts', children: [] },
+                            { name: 'Final', children: [] }
+                        ]},
+                        { name: 'VFX', children: [] },
+                        { name: 'Color', children: [
+                            { name: 'LUTs', children: [] },
+                            { name: 'Grades', children: [] }
+                        ]},
+                        { name: 'Sound_Design', children: [] },
+                        { name: 'Music', children: [
+                            { name: 'Licensed', children: [] },
+                            { name: 'Original', children: [] }
+                        ]}
+                    ]},
+                    { name: '04_Delivery', children: [
+                        { name: 'Masters', children: [] },
+                        { name: 'Exports', children: [
+                            { name: 'Web', children: [] },
+                            { name: 'Broadcast', children: [] },
+                            { name: 'Social', children: [] }
+                        ]},
+                        { name: 'Thumbnails', children: [] },
+                        { name: 'Subtitles', children: [] }
+                    ]},
+                    { name: '05_Admin', children: [
+                        { name: 'Contracts', children: [] },
+                        { name: 'Invoices', children: [] },
+                        { name: 'Releases', children: [] },
+                        { name: 'Budget', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'software-dev',
+                name: 'Software Development',
+                description: 'Modern project structure for apps',
+                icon: '💻',
+                structure: [
+                    { name: 'src', children: [
+                        { name: 'components', children: [
+                            { name: 'common', children: [] },
+                            { name: 'layout', children: [] },
+                            { name: 'forms', children: [] }
+                        ]},
+                        { name: 'pages', children: [] },
+                        { name: 'hooks', children: [] },
+                        { name: 'utils', children: [] },
+                        { name: 'services', children: [
+                            { name: 'api', children: [] },
+                            { name: 'auth', children: [] }
+                        ]},
+                        { name: 'styles', children: [] },
+                        { name: 'assets', children: [
+                            { name: 'images', children: [] },
+                            { name: 'fonts', children: [] },
+                            { name: 'icons', children: [] }
+                        ]},
+                        { name: 'types', children: [] },
+                        { name: 'constants', children: [] }
+                    ]},
+                    { name: 'tests', children: [
+                        { name: 'unit', children: [] },
+                        { name: 'integration', children: [] },
+                        { name: 'e2e', children: [] },
+                        { name: 'fixtures', children: [] }
+                    ]},
+                    { name: 'docs', children: [
+                        { name: 'api', children: [] },
+                        { name: 'guides', children: [] },
+                        { name: 'architecture', children: [] }
+                    ]},
+                    { name: 'config', children: [] },
+                    { name: 'scripts', children: [] },
+                    { name: 'public', children: [] }
+                ]
+            },
+            {
+                id: 'game-dev',
+                name: 'Game Development',
+                description: 'Unity/Unreal style project structure',
+                icon: '🎮',
+                structure: [
+                    { name: 'Assets', children: [
+                        { name: 'Art', children: [
+                            { name: 'Characters', children: [
+                                { name: 'Player', children: [] },
+                                { name: 'NPCs', children: [] },
+                                { name: 'Enemies', children: [] }
+                            ]},
+                            { name: 'Environments', children: [
+                                { name: 'Terrain', children: [] },
+                                { name: 'Buildings', children: [] },
+                                { name: 'Props', children: [] }
+                            ]},
+                            { name: 'UI', children: [
+                                { name: 'HUD', children: [] },
+                                { name: 'Menus', children: [] },
+                                { name: 'Icons', children: [] }
+                            ]},
+                            { name: 'VFX', children: [
+                                { name: 'Particles', children: [] },
+                                { name: 'Shaders', children: [] }
+                            ]}
+                        ]},
+                        { name: 'Audio', children: [
+                            { name: 'Music', children: [] },
+                            { name: 'SFX', children: [] },
+                            { name: 'Voice', children: [] },
+                            { name: 'Ambient', children: [] }
+                        ]},
+                        { name: 'Animations', children: [
+                            { name: 'Character', children: [] },
+                            { name: 'Object', children: [] },
+                            { name: 'Cutscene', children: [] }
+                        ]},
+                        { name: 'Materials', children: [] },
+                        { name: 'Prefabs', children: [] }
+                    ]},
+                    { name: 'Scripts', children: [
+                        { name: 'Player', children: [] },
+                        { name: 'Enemies', children: [] },
+                        { name: 'Systems', children: [
+                            { name: 'Combat', children: [] },
+                            { name: 'Inventory', children: [] },
+                            { name: 'Save', children: [] }
+                        ]},
+                        { name: 'UI', children: [] },
+                        { name: 'Utils', children: [] }
+                    ]},
+                    { name: 'Scenes', children: [
+                        { name: 'Levels', children: [] },
+                        { name: 'Menus', children: [] },
+                        { name: 'Test', children: [] }
+                    ]},
+                    { name: 'Resources', children: [] },
+                    { name: 'Plugins', children: [] },
+                    { name: 'Documentation', children: [
+                        { name: 'GDD', children: [] },
+                        { name: 'Technical', children: [] },
+                        { name: 'Art_Bible', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'photography',
+                name: 'Photography Project',
+                description: 'Professional photo workflow',
+                icon: '📷',
+                structure: [
+                    { name: '01_RAW', children: [
+                        { name: 'Selects', children: [] },
+                        { name: 'Rejects', children: [] },
+                        { name: 'Backup', children: [] }
+                    ]},
+                    { name: '02_Edited', children: [
+                        { name: 'Work_In_Progress', children: [] },
+                        { name: 'Final', children: [] },
+                        { name: 'Alternates', children: [] }
+                    ]},
+                    { name: '03_Exports', children: [
+                        { name: 'Web', children: [
+                            { name: 'Full_Res', children: [] },
+                            { name: 'Optimized', children: [] }
+                        ]},
+                        { name: 'Print', children: [
+                            { name: 'Large', children: [] },
+                            { name: 'Medium', children: [] },
+                            { name: 'Small', children: [] }
+                        ]},
+                        { name: 'Social', children: [
+                            { name: 'Instagram', children: [] },
+                            { name: 'Facebook', children: [] }
+                        ]}
+                    ]},
+                    { name: '04_Client', children: [
+                        { name: 'Proofs', children: [] },
+                        { name: 'Selected', children: [] },
+                        { name: 'Delivered', children: [] }
+                    ]},
+                    { name: '05_Admin', children: [
+                        { name: 'Contracts', children: [] },
+                        { name: 'Invoices', children: [] },
+                        { name: 'Model_Releases', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'architecture',
+                name: 'Architecture / Design',
+                description: 'CAD and design project structure',
+                icon: '🏛️',
+                structure: [
+                    { name: '01_Briefing', children: [
+                        { name: 'Client_Requirements', children: [] },
+                        { name: 'Site_Analysis', children: [
+                            { name: 'Survey', children: [] },
+                            { name: 'Photos', children: [] },
+                            { name: 'Context', children: [] }
+                        ]},
+                        { name: 'References', children: [] },
+                        { name: 'Regulations', children: [] }
+                    ]},
+                    { name: '02_Concept', children: [
+                        { name: 'Sketches', children: [] },
+                        { name: 'Diagrams', children: [] },
+                        { name: 'Massing', children: [] },
+                        { name: 'Precedents', children: [] }
+                    ]},
+                    { name: '03_Development', children: [
+                        { name: 'Plans', children: [
+                            { name: 'Ground_Floor', children: [] },
+                            { name: 'Upper_Floors', children: [] },
+                            { name: 'Roof', children: [] }
+                        ]},
+                        { name: 'Sections', children: [] },
+                        { name: 'Elevations', children: [] },
+                        { name: 'Details', children: [] }
+                    ]},
+                    { name: '04_3D_Models', children: [
+                        { name: 'Working', children: [] },
+                        { name: 'Presentation', children: [] },
+                        { name: 'BIM', children: [] }
+                    ]},
+                    { name: '05_Renders', children: [
+                        { name: 'Exterior', children: [] },
+                        { name: 'Interior', children: [] },
+                        { name: 'Diagrams', children: [] },
+                        { name: 'Animations', children: [] }
+                    ]},
+                    { name: '06_Documentation', children: [
+                        { name: 'Specifications', children: [] },
+                        { name: 'Schedules', children: [] },
+                        { name: 'Calculations', children: [] }
+                    ]},
+                    { name: '07_Deliverables', children: [
+                        { name: 'Presentations', children: [] },
+                        { name: 'Submittals', children: [] },
+                        { name: 'As_Built', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'music-production',
+                name: 'Music Production',
+                description: 'DAW project and audio workflow',
+                icon: '🎵',
+                structure: [
+                    { name: '01_Project_Files', children: [
+                        { name: 'Sessions', children: [] },
+                        { name: 'Backups', children: [] },
+                        { name: 'Templates', children: [] }
+                    ]},
+                    { name: '02_Audio', children: [
+                        { name: 'Recordings', children: [
+                            { name: 'Vocals', children: [] },
+                            { name: 'Guitars', children: [] },
+                            { name: 'Bass', children: [] },
+                            { name: 'Drums', children: [] },
+                            { name: 'Keys', children: [] }
+                        ]},
+                        { name: 'Samples', children: [] },
+                        { name: 'Loops', children: [] },
+                        { name: 'Foley', children: [] }
+                    ]},
+                    { name: '03_MIDI', children: [
+                        { name: 'Instruments', children: [] },
+                        { name: 'Drums', children: [] }
+                    ]},
+                    { name: '04_Mix', children: [
+                        { name: 'Stems', children: [] },
+                        { name: 'Bounces', children: [] },
+                        { name: 'Revisions', children: [] }
+                    ]},
+                    { name: '05_Master', children: [
+                        { name: 'Premaster', children: [] },
+                        { name: 'Final', children: [] },
+                        { name: 'Formats', children: [
+                            { name: 'WAV', children: [] },
+                            { name: 'MP3', children: [] },
+                            { name: 'Streaming', children: [] }
+                        ]}
+                    ]},
+                    { name: '06_Assets', children: [
+                        { name: 'Artwork', children: [] },
+                        { name: 'Lyrics', children: [] },
+                        { name: 'Press', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'education',
+                name: 'Course / Module',
+                description: 'Educational content structure',
+                icon: '📚',
+                structure: [
+                    { name: 'Course_Info', children: [
+                        { name: 'Syllabus', children: [] },
+                        { name: 'Learning_Outcomes', children: [] },
+                        { name: 'Schedule', children: [] },
+                        { name: 'Policies', children: [] }
+                    ]},
+                    { name: 'Week_01', children: [
+                        { name: 'Lecture_Materials', children: [
+                            { name: 'Slides', children: [] },
+                            { name: 'Notes', children: [] }
+                        ]},
+                        { name: 'Readings', children: [] },
+                        { name: 'Activities', children: [] },
+                        { name: 'Assignment', children: [] }
+                    ]},
+                    { name: 'Week_02', children: [
+                        { name: 'Lecture_Materials', children: [
+                            { name: 'Slides', children: [] },
+                            { name: 'Notes', children: [] }
+                        ]},
+                        { name: 'Readings', children: [] },
+                        { name: 'Activities', children: [] },
+                        { name: 'Assignment', children: [] }
+                    ]},
+                    { name: 'Week_03', children: [
+                        { name: 'Lecture_Materials', children: [
+                            { name: 'Slides', children: [] },
+                            { name: 'Notes', children: [] }
+                        ]},
+                        { name: 'Readings', children: [] },
+                        { name: 'Activities', children: [] },
+                        { name: 'Assignment', children: [] }
+                    ]},
+                    { name: 'Resources', children: [
+                        { name: 'Templates', children: [] },
+                        { name: 'Examples', children: [] },
+                        { name: 'Software', children: [] },
+                        { name: 'External_Links', children: [] }
+                    ]},
+                    { name: 'Assessments', children: [
+                        { name: 'Rubrics', children: [] },
+                        { name: 'Submissions', children: [] },
+                        { name: 'Feedback', children: [] },
+                        { name: 'Grades', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'marketing',
+                name: 'Marketing Campaign',
+                description: 'Campaign planning and assets',
+                icon: '📣',
+                structure: [
+                    { name: '01_Strategy', children: [
+                        { name: 'Research', children: [
+                            { name: 'Market_Analysis', children: [] },
+                            { name: 'Consumer_Insights', children: [] }
+                        ]},
+                        { name: 'Competitor_Analysis', children: [] },
+                        { name: 'Audience', children: [
+                            { name: 'Personas', children: [] },
+                            { name: 'Segments', children: [] }
+                        ]},
+                        { name: 'Campaign_Brief', children: [] }
+                    ]},
+                    { name: '02_Creative', children: [
+                        { name: 'Concepts', children: [] },
+                        { name: 'Copy', children: [
+                            { name: 'Headlines', children: [] },
+                            { name: 'Body_Copy', children: [] },
+                            { name: 'Scripts', children: [] }
+                        ]},
+                        { name: 'Design', children: [
+                            { name: 'Print', children: [] },
+                            { name: 'Digital', children: [] },
+                            { name: 'Social', children: [] },
+                            { name: 'OOH', children: [] }
+                        ]},
+                        { name: 'Video', children: [] },
+                        { name: 'Brand_Assets', children: [] }
+                    ]},
+                    { name: '03_Media', children: [
+                        { name: 'Media_Plan', children: [] },
+                        { name: 'Placements', children: [] },
+                        { name: 'Tracking', children: [] },
+                        { name: 'UTM_Codes', children: [] }
+                    ]},
+                    { name: '04_Execution', children: [
+                        { name: 'Assets_Final', children: [] },
+                        { name: 'Schedules', children: [] },
+                        { name: 'Approvals', children: [] }
+                    ]},
+                    { name: '05_Reports', children: [
+                        { name: 'Analytics', children: [] },
+                        { name: 'Performance', children: [] },
+                        { name: 'Learnings', children: [] },
+                        { name: 'ROI', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'legal',
+                name: 'Legal / Case Files',
+                description: 'Client case management',
+                icon: '⚖️',
+                structure: [
+                    { name: 'Client_Info', children: [
+                        { name: 'Contact', children: [] },
+                        { name: 'Identification', children: [] },
+                        { name: 'Engagement_Letter', children: [] },
+                        { name: 'Conflicts_Check', children: [] }
+                    ]},
+                    { name: 'Case_Documents', children: [
+                        { name: 'Pleadings', children: [
+                            { name: 'Complaints', children: [] },
+                            { name: 'Answers', children: [] },
+                            { name: 'Motions', children: [] }
+                        ]},
+                        { name: 'Discovery', children: [
+                            { name: 'Interrogatories', children: [] },
+                            { name: 'Requests', children: [] },
+                            { name: 'Depositions', children: [] }
+                        ]},
+                        { name: 'Evidence', children: [
+                            { name: 'Documents', children: [] },
+                            { name: 'Photos', children: [] },
+                            { name: 'Expert_Reports', children: [] }
+                        ]},
+                        { name: 'Court_Orders', children: [] }
+                    ]},
+                    { name: 'Correspondence', children: [
+                        { name: 'Client', children: [] },
+                        { name: 'Opposing_Counsel', children: [] },
+                        { name: 'Court', children: [] },
+                        { name: 'Third_Parties', children: [] }
+                    ]},
+                    { name: 'Research', children: [
+                        { name: 'Case_Law', children: [] },
+                        { name: 'Statutes', children: [] },
+                        { name: 'Memos', children: [] }
+                    ]},
+                    { name: 'Billing', children: [
+                        { name: 'Time_Records', children: [] },
+                        { name: 'Invoices', children: [] },
+                        { name: 'Expenses', children: [] },
+                        { name: 'Trust_Account', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'blender-project',
+                name: '3D / Blender Project',
+                description: 'Professional 3D project structure',
+                icon: '🎨',
+                structure: [
+                    { name: 'Assets', children: [
+                        { name: 'Models', children: [
+                            { name: 'Characters', children: [] },
+                            { name: 'Props', children: [] },
+                            { name: 'Environment', children: [] },
+                            { name: 'Vehicles', children: [] }
+                        ]},
+                        { name: 'Textures', children: [
+                            { name: 'PBR', children: [
+                                { name: 'Albedo', children: [] },
+                                { name: 'Normal', children: [] },
+                                { name: 'Roughness', children: [] },
+                                { name: 'Metallic', children: [] }
+                            ]},
+                            { name: 'Procedural', children: [] }
+                        ]},
+                        { name: 'Materials', children: [] },
+                        { name: 'HDRIs', children: [] }
+                    ]},
+                    { name: 'Scenes', children: [
+                        { name: 'Working', children: [] },
+                        { name: 'Final', children: [] },
+                        { name: 'Archive', children: [] }
+                    ]},
+                    { name: 'Animation', children: [
+                        { name: 'Rigs', children: [] },
+                        { name: 'Actions', children: [] },
+                        { name: 'Mocap', children: [] },
+                        { name: 'Caches', children: [] }
+                    ]},
+                    { name: 'Renders', children: [
+                        { name: 'Test', children: [] },
+                        { name: 'Final', children: [] },
+                        { name: 'Passes', children: [
+                            { name: 'Beauty', children: [] },
+                            { name: 'Depth', children: [] },
+                            { name: 'AO', children: [] }
+                        ]}
+                    ]},
+                    { name: 'Reference', children: [
+                        { name: 'Concepts', children: [] },
+                        { name: 'Photos', children: [] },
+                        { name: 'Mood_Board', children: [] }
+                    ]},
+                    { name: 'Export', children: [
+                        { name: 'FBX', children: [] },
+                        { name: 'GLTF', children: [] },
+                        { name: 'USD', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'research',
+                name: 'Research Project',
+                description: 'Academic research structure',
+                icon: '🔬',
+                structure: [
+                    { name: 'Literature', children: [
+                        { name: 'Papers', children: [
+                            { name: 'To_Read', children: [] },
+                            { name: 'Read', children: [] },
+                            { name: 'Key_References', children: [] }
+                        ]},
+                        { name: 'Books', children: [] },
+                        { name: 'Notes', children: [] },
+                        { name: 'Annotations', children: [] }
+                    ]},
+                    { name: 'Data', children: [
+                        { name: 'Raw', children: [] },
+                        { name: 'Processed', children: [] },
+                        { name: 'Analysis', children: [] },
+                        { name: 'Metadata', children: [] }
+                    ]},
+                    { name: 'Code', children: [
+                        { name: 'Scripts', children: [] },
+                        { name: 'Notebooks', children: [] },
+                        { name: 'Functions', children: [] }
+                    ]},
+                    { name: 'Figures', children: [
+                        { name: 'Drafts', children: [] },
+                        { name: 'Final', children: [] },
+                        { name: 'Supplementary', children: [] }
+                    ]},
+                    { name: 'Writing', children: [
+                        { name: 'Drafts', children: [] },
+                        { name: 'Revisions', children: [] },
+                        { name: 'Submitted', children: [] },
+                        { name: 'Published', children: [] }
+                    ]},
+                    { name: 'Presentations', children: [
+                        { name: 'Talks', children: [] },
+                        { name: 'Posters', children: [] }
+                    ]},
+                    { name: 'Admin', children: [
+                        { name: 'Ethics', children: [] },
+                        { name: 'Funding', children: [] },
+                        { name: 'Collaboration', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'event-planning',
+                name: 'Event Planning',
+                description: 'Conference, wedding, or corporate event',
+                icon: '🎪',
+                structure: [
+                    { name: '01_Planning', children: [
+                        { name: 'Brief', children: [] },
+                        { name: 'Budget', children: [] },
+                        { name: 'Timeline', children: [] },
+                        { name: 'Checklist', children: [] }
+                    ]},
+                    { name: '02_Venue', children: [
+                        { name: 'Options', children: [] },
+                        { name: 'Contracts', children: [] },
+                        { name: 'Floor_Plans', children: [] },
+                        { name: 'Site_Photos', children: [] }
+                    ]},
+                    { name: '03_Vendors', children: [
+                        { name: 'Catering', children: [] },
+                        { name: 'AV_Equipment', children: [] },
+                        { name: 'Decorations', children: [] },
+                        { name: 'Entertainment', children: [] },
+                        { name: 'Photography', children: [] }
+                    ]},
+                    { name: '04_Guests', children: [
+                        { name: 'Invitations', children: [] },
+                        { name: 'RSVP_List', children: [] },
+                        { name: 'Seating', children: [] },
+                        { name: 'VIP', children: [] }
+                    ]},
+                    { name: '05_Program', children: [
+                        { name: 'Schedule', children: [] },
+                        { name: 'Speakers', children: [] },
+                        { name: 'Activities', children: [] },
+                        { name: 'Scripts', children: [] }
+                    ]},
+                    { name: '06_Marketing', children: [
+                        { name: 'Branding', children: [] },
+                        { name: 'Promotional', children: [] },
+                        { name: 'Social_Media', children: [] }
+                    ]},
+                    { name: '07_Post_Event', children: [
+                        { name: 'Photos', children: [] },
+                        { name: 'Videos', children: [] },
+                        { name: 'Feedback', children: [] },
+                        { name: 'Report', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'startup',
+                name: 'Startup / Business',
+                description: 'New venture documentation',
+                icon: '🚀',
+                structure: [
+                    { name: '01_Company', children: [
+                        { name: 'Legal', children: [
+                            { name: 'Incorporation', children: [] },
+                            { name: 'Agreements', children: [] },
+                            { name: 'IP', children: [] }
+                        ]},
+                        { name: 'Governance', children: [] },
+                        { name: 'Insurance', children: [] }
+                    ]},
+                    { name: '02_Product', children: [
+                        { name: 'Roadmap', children: [] },
+                        { name: 'Specs', children: [] },
+                        { name: 'Design', children: [] },
+                        { name: 'Research', children: [] }
+                    ]},
+                    { name: '03_Finance', children: [
+                        { name: 'Accounting', children: [
+                            { name: 'Invoices', children: [] },
+                            { name: 'Expenses', children: [] },
+                            { name: 'Reports', children: [] }
+                        ]},
+                        { name: 'Funding', children: [
+                            { name: 'Pitch_Deck', children: [] },
+                            { name: 'Term_Sheets', children: [] },
+                            { name: 'Cap_Table', children: [] }
+                        ]},
+                        { name: 'Budget', children: [] }
+                    ]},
+                    { name: '04_Team', children: [
+                        { name: 'HR', children: [] },
+                        { name: 'Hiring', children: [] },
+                        { name: 'Onboarding', children: [] },
+                        { name: 'Policies', children: [] }
+                    ]},
+                    { name: '05_Marketing', children: [
+                        { name: 'Brand', children: [] },
+                        { name: 'Content', children: [] },
+                        { name: 'Campaigns', children: [] },
+                        { name: 'Analytics', children: [] }
+                    ]},
+                    { name: '06_Sales', children: [
+                        { name: 'Leads', children: [] },
+                        { name: 'Proposals', children: [] },
+                        { name: 'Contracts', children: [] },
+                        { name: 'CRM', children: [] }
+                    ]},
+                    { name: '07_Operations', children: [
+                        { name: 'Processes', children: [] },
+                        { name: 'Tools', children: [] },
+                        { name: 'Vendors', children: [] }
+                    ]}
+                ]
+            },
+            {
+                id: 'personal-organizer',
+                name: 'Personal Organizer',
+                description: 'Life and personal file management',
+                icon: '📋',
+                structure: [
+                    { name: 'Documents', children: [
+                        { name: 'Identity', children: [
+                            { name: 'Passport', children: [] },
+                            { name: 'Drivers_License', children: [] },
+                            { name: 'Birth_Certificate', children: [] }
+                        ]},
+                        { name: 'Financial', children: [
+                            { name: 'Bank_Statements', children: [] },
+                            { name: 'Tax_Returns', children: [] },
+                            { name: 'Investments', children: [] }
+                        ]},
+                        { name: 'Medical', children: [
+                            { name: 'Records', children: [] },
+                            { name: 'Insurance', children: [] },
+                            { name: 'Prescriptions', children: [] }
+                        ]},
+                        { name: 'Property', children: [
+                            { name: 'Home', children: [] },
+                            { name: 'Vehicle', children: [] },
+                            { name: 'Insurance', children: [] }
+                        ]}
+                    ]},
+                    { name: 'Work', children: [
+                        { name: 'Resume', children: [] },
+                        { name: 'Portfolio', children: [] },
+                        { name: 'Certifications', children: [] },
+                        { name: 'References', children: [] }
+                    ]},
+                    { name: 'Projects', children: [
+                        { name: 'Active', children: [] },
+                        { name: 'Completed', children: [] },
+                        { name: 'Ideas', children: [] }
+                    ]},
+                    { name: 'Photos', children: [
+                        { name: 'Family', children: [] },
+                        { name: 'Travel', children: [] },
+                        { name: 'Events', children: [] },
+                        { name: 'Archive', children: [] }
+                    ]},
+                    { name: 'Learning', children: [
+                        { name: 'Courses', children: [] },
+                        { name: 'Books', children: [] },
+                        { name: 'Notes', children: [] }
+                    ]}
+                ]
+            }
+        ];
+
+        // ===== UTILITY FUNCTIONS =====
+        function generateId() {
+            return 'folder_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        }
+
+        function addIdsToStructure(folders) {
+            return folders.map(folder => ({
+                id: generateId(),
+                name: folder.name,
+                children: addIdsToStructure(folder.children || [])
+            }));
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${type === 'success'
+                        ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                        : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'
+                    }
+                </svg>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ===== FOLDER OPERATIONS =====
+        function countFolders(folders) {
+            return folders.reduce((count, folder) => {
+                return count + 1 + countFolders(folder.children || []);
+            }, 0);
+        }
+
+        function getMaxDepth(folders, currentDepth = 1) {
+            if (!folders.length) return currentDepth - 1;
+            return Math.max(...folders.map(folder =>
+                folder.children?.length
+                    ? getMaxDepth(folder.children, currentDepth + 1)
+                    : currentDepth
+            ));
+        }
+
+        function findFolderById(folders, id) {
+            for (const folder of folders) {
+                if (folder.id === id) return folder;
+                if (folder.children) {
+                    const found = findFolderById(folder.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        function findParentById(folders, id, parent = null) {
+            for (const folder of folders) {
+                if (folder.id === id) return parent;
+                if (folder.children) {
+                    const found = findParentById(folder.children, id, folder);
+                    if (found !== undefined) return found;
+                }
+            }
+            return undefined;
+        }
+
+        function removeFolderById(folders, id) {
+            const index = folders.findIndex(f => f.id === id);
+            if (index !== -1) {
+                folders.splice(index, 1);
+                return true;
+            }
+            for (const folder of folders) {
+                if (folder.children && removeFolderById(folder.children, id)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function addRootFolder() {
+            const newFolder = {
+                id: generateId(),
+                name: 'New Folder',
+                children: []
+            };
+            // Add at the TOP of the list, not the bottom
+            folderStructure.unshift(newFolder);
+            renderTree();
+            updateStats();
+            startEditing(newFolder.id);
+        }
+
+        function addChildFolder(parentId) {
+            const parent = findFolderById(folderStructure, parentId);
+            if (parent) {
+                const newFolder = {
+                    id: generateId(),
+                    name: 'New Folder',
+                    children: []
+                };
+                parent.children = parent.children || [];
+                parent.children.push(newFolder);
+
+                // Ensure parent is expanded
+                const toggle = document.querySelector(`[data-folder-id="${parentId}"] .folder-toggle`);
+                if (toggle) toggle.classList.remove('collapsed');
+                const children = document.querySelector(`[data-folder-id="${parentId}"] .folder-children`);
+                if (children) children.classList.remove('collapsed');
+
+                renderTree();
+                updateStats();
+                startEditing(newFolder.id);
+            }
+        }
+
+        function deleteFolder(id) {
+            removeFolderById(folderStructure, id);
+            if (selectedFolderId === id) selectedFolderId = null;
+            renderTree();
+            updateStats();
+        }
+
+        function duplicateFolder(id) {
+            const folder = findFolderById(folderStructure, id);
+            const parent = findParentById(folderStructure, id);
+
+            if (folder) {
+                const clone = deepClone(folder);
+                const updateIds = (f) => {
+                    f.id = generateId();
+                    f.name = f.name + ' Copy';
+                    (f.children || []).forEach(updateIds);
+                };
+                updateIds(clone);
+                clone.name = folder.name + ' Copy';
+
+                if (parent) {
+                    parent.children.push(clone);
+                } else {
+                    folderStructure.push(clone);
+                }
+
+                renderTree();
+                updateStats();
+                showToast('Folder duplicated');
+            }
+        }
+
+        function startEditing(id) {
+            const row = document.querySelector(`[data-folder-id="${id}"] > .folder-row`);
+            if (!row) return;
+
+            const nameSpan = row.querySelector('.folder-name');
+            const folder = findFolderById(folderStructure, id);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'folder-name-input';
+            input.value = folder.name;
+
+            input.onblur = () => finishEditing(id, input.value);
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') input.blur();
+                if (e.key === 'Escape') {
+                    input.value = folder.name;
+                    input.blur();
+                }
+            };
+
+            nameSpan.replaceWith(input);
+            input.focus();
+            input.select();
+        }
+
+        function finishEditing(id, newName) {
+            const folder = findFolderById(folderStructure, id);
+            if (folder) {
+                folder.name = newName.trim() || 'Untitled';
+            }
+            renderTree();
+            updatePreview();
+        }
+
+        // ===== RENDERING =====
+        function renderTree() {
+            const container = document.getElementById('folderTree');
+
+            if (folderStructure.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <p>No folders yet.<br>Add a folder or load a template to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = renderFolderItems(folderStructure);
+            updatePreview();
+        }
+
+        function renderFolderItems(folders) {
+            return folders.map(folder => {
+                const hasChildren = folder.children && folder.children.length > 0;
+                const isSelected = folder.id === selectedFolderId;
+
+                return `
+                    <div class="folder-item" data-folder-id="${folder.id}">
+                        <div class="folder-row ${isSelected ? 'selected' : ''}"
+                             onclick="selectFolder('${folder.id}')"
+                             ondblclick="startEditing('${folder.id}')"
+                             draggable="true"
+                             ondragstart="handleDragStart(event, '${folder.id}')"
+                             ondragend="handleDragEnd(event)"
+                             ondragover="handleDragOver(event, '${folder.id}')"
+                             ondragleave="handleDragLeave(event)"
+                             ondrop="handleDrop(event, '${folder.id}')">
+                            <div class="folder-toggle ${hasChildren ? '' : 'empty'}" onclick="event.stopPropagation(); toggleFolder('${folder.id}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                            </div>
+                            <svg class="folder-icon" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                <path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/>
+                            </svg>
+                            <span class="folder-name">${escapeHtml(folder.name)}</span>
+                            ${hasChildren ? `<span class="folder-count">${folder.children.length}</span>` : ''}
+                            <div class="folder-actions">
+                                <button class="folder-action" onclick="event.stopPropagation(); addChildFolder('${folder.id}')" title="Add subfolder">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                </button>
+                                <button class="folder-action" onclick="event.stopPropagation(); duplicateFolder('${folder.id}')" title="Duplicate">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                                <button class="folder-action" onclick="event.stopPropagation(); startEditing('${folder.id}')" title="Rename">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </button>
+                                <button class="folder-action delete" onclick="event.stopPropagation(); deleteFolder('${folder.id}')" title="Delete">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        ${hasChildren ? `
+                            <div class="folder-children">
+                                ${renderFolderItems(folder.children)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function selectFolder(id) {
+            selectedFolderId = id;
+            renderTree();
+        }
+
+        function toggleFolder(id) {
+            const item = document.querySelector(`[data-folder-id="${id}"]`);
+            if (item) {
+                const toggle = item.querySelector('.folder-toggle');
+                const children = item.querySelector('.folder-children');
+                if (toggle && children) {
+                    toggle.classList.toggle('collapsed');
+                    children.classList.toggle('collapsed');
+                }
+            }
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.folder-toggle').forEach(t => t.classList.remove('collapsed'));
+            document.querySelectorAll('.folder-children').forEach(c => c.classList.remove('collapsed'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.folder-toggle:not(.empty)').forEach(t => t.classList.add('collapsed'));
+            document.querySelectorAll('.folder-children').forEach(c => c.classList.add('collapsed'));
+        }
+
+        function clearAll() {
+            if (folderStructure.length === 0) return;
+            if (confirm('Clear all folders? This cannot be undone.')) {
+                folderStructure = [];
+                selectedFolderId = null;
+                renderTree();
+                updateStats();
+                showToast('Structure cleared');
+            }
+        }
+
+        // ===== DRAG AND DROP =====
+        function handleDragStart(event, id) {
+            draggedItem = id;
+            event.dataTransfer.effectAllowed = 'move';
+            event.target.style.opacity = '0.5';
+
+            const ghost = document.getElementById('dragGhost');
+            const folder = findFolderById(folderStructure, id);
+            document.getElementById('dragGhostText').textContent = folder.name;
+            ghost.classList.add('active');
+
+            document.addEventListener('dragover', updateGhostPosition);
+        }
+
+        function updateGhostPosition(e) {
+            const ghost = document.getElementById('dragGhost');
+            ghost.style.left = (e.clientX + 15) + 'px';
+            ghost.style.top = (e.clientY + 15) + 'px';
+        }
+
+        function handleDragEnd(event) {
+            event.target.style.opacity = '1';
+            draggedItem = null;
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+
+            const ghost = document.getElementById('dragGhost');
+            ghost.classList.remove('active');
+            document.removeEventListener('dragover', updateGhostPosition);
+        }
+
+        function handleDragOver(event, targetId) {
+            event.preventDefault();
+            if (draggedItem && draggedItem !== targetId) {
+                const row = event.currentTarget;
+                row.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(event, targetId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+
+            if (draggedItem && draggedItem !== targetId) {
+                const draggedFolder = findFolderById(folderStructure, draggedItem);
+                const targetFolder = findFolderById(folderStructure, targetId);
+
+                // Check if target is not a descendant of dragged
+                if (draggedFolder && targetFolder && !isDescendant(draggedFolder, targetId)) {
+                    // Remove from original location
+                    removeFolderById(folderStructure, draggedItem);
+
+                    // Add to new parent
+                    targetFolder.children = targetFolder.children || [];
+                    targetFolder.children.push(draggedFolder);
+
+                    renderTree();
+                    updateStats();
+                    showToast('Folder moved');
+                }
+            }
+        }
+
+        function isDescendant(folder, targetId) {
+            if (folder.id === targetId) return true;
+            if (folder.children) {
+                return folder.children.some(child => isDescendant(child, targetId));
+            }
+            return false;
+        }
+
+        // ===== TEMPLATES =====
+        function renderTemplates() {
+            const container = document.getElementById('templatesPanel');
+
+            const customHtml = customTemplates.map(t => `
+                <div class="template-card custom" onclick="loadTemplate('${t.id}', true)">
+                    <div class="template-name">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        ${escapeHtml(t.name)}
+                    </div>
+                    <div class="template-desc">${escapeHtml(t.description || 'Custom template')}</div>
+                    <div class="template-actions">
+                        <span class="template-badge custom">Custom</span>
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteCustomTemplate('${t.id}')" style="margin-left:auto;padding:4px 8px">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            const builtInHtml = builtInTemplates.map(t => `
+                <div class="template-card" onclick="loadTemplate('${t.id}', false)">
+                    <div class="template-name">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        ${t.icon} ${escapeHtml(t.name)}
+                    </div>
+                    <div class="template-desc">${escapeHtml(t.description)}</div>
+                    <div class="template-actions">
+                        <span class="template-badge">Built-in</span>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = customHtml + builtInHtml;
+            updateStats();
+        }
+
+        function loadTemplate(id, isCustom) {
+            const template = isCustom
+                ? customTemplates.find(t => t.id === id)
+                : builtInTemplates.find(t => t.id === id);
+
+            if (template) {
+                folderStructure = addIdsToStructure(deepClone(template.structure));
+                document.getElementById('projectName').value = template.name;
+                renderTree();
+                updateStats();
+                showToast(`Loaded: ${template.name}`);
+            }
+        }
+
+        function saveAsTemplate() {
+            document.getElementById('templateName').value = document.getElementById('projectName').value;
+            document.getElementById('templateDesc').value = '';
+            document.getElementById('saveModal').classList.add('active');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.remove('active');
+        }
+
+        function confirmSaveTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            const desc = document.getElementById('templateDesc').value.trim();
+
+            if (!name) {
+                showToast('Please enter a template name', 'error');
+                return;
+            }
+
+            if (folderStructure.length === 0) {
+                showToast('Cannot save empty structure', 'error');
+                return;
+            }
+
+            const template = {
+                id: 'custom_' + Date.now(),
+                name: name,
+                description: desc,
+                structure: stripIds(deepClone(folderStructure))
+            };
+
+            customTemplates.push(template);
+            saveCustomTemplates();
+            renderTemplates();
+            closeSaveModal();
+            showToast('Template saved!');
+        }
+
+        function deleteCustomTemplate(id) {
+            if (confirm('Delete this template?')) {
+                customTemplates = customTemplates.filter(t => t.id !== id);
+                saveCustomTemplates();
+                renderTemplates();
+                showToast('Template deleted');
+            }
+        }
+
+        function stripIds(folders) {
+            return folders.map(f => ({
+                name: f.name,
+                children: stripIds(f.children || [])
+            }));
+        }
+
+        function saveCustomTemplates() {
+            localStorage.setItem('folderArchitect_templates', JSON.stringify(customTemplates));
+        }
+
+        function loadCustomTemplates() {
+            const saved = localStorage.getItem('folderArchitect_templates');
+            if (saved) {
+                try {
+                    customTemplates = JSON.parse(saved);
+                } catch (e) {
+                    customTemplates = [];
+                }
+            }
+        }
+
+        function exportSavedTemplates() {
+            if (customTemplates.length === 0) {
+                showToast('No saved templates to export', 'warning');
+                return;
+            }
+            const data = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                templates: customTemplates
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `folder-architect-templates-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Exported ${customTemplates.length} template(s)`, 'success');
+        }
+
+        function importSavedTemplates(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let templates = [];
+
+                    // Handle both formats: direct array or wrapped object
+                    if (Array.isArray(data)) {
+                        templates = data;
+                    } else if (data.templates && Array.isArray(data.templates)) {
+                        templates = data.templates;
+                    } else {
+                        throw new Error('Invalid template format');
+                    }
+
+                    // Validate and add templates
+                    let added = 0;
+                    templates.forEach(t => {
+                        if (t.name && t.structure) {
+                            // Check for duplicates by name
+                            const exists = customTemplates.some(ct => ct.name === t.name);
+                            if (!exists) {
+                                customTemplates.push({
+                                    id: t.id || 'custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                    name: t.name,
+                                    description: t.description || '',
+                                    structure: t.structure
+                                });
+                                added++;
+                            }
+                        }
+                    });
+
+                    saveCustomTemplates();
+                    renderTemplates();
+                    showToast(`Imported ${added} template(s)`, 'success');
+                } catch (err) {
+                    showToast('Invalid template file', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset for re-import
+        }
+
+        // ===== NAMING CONVENTIONS =====
+        function applyNamingConventions(name) {
+            const prefix = document.getElementById('globalPrefix').value;
+            const suffix = document.getElementById('globalSuffix').value;
+            const separator = document.getElementById('separatorStyle').value;
+            const caseStyle = document.getElementById('caseStyle').value;
+
+            let result = name;
+
+            // Apply case
+            switch (caseStyle) {
+                case 'lowercase':
+                    result = result.toLowerCase();
+                    break;
+                case 'uppercase':
+                    result = result.toUpperCase();
+                    break;
+                case 'capitalize':
+                    result = result.split(/[\s_-]+/).map(w =>
+                        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                    ).join(' ');
+                    break;
+                case 'camel':
+                    result = result.split(/[\s_-]+/).map((w, i) =>
+                        i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                    ).join('');
+                    break;
+                case 'pascal':
+                    result = result.split(/[\s_-]+/).map(w =>
+                        w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                    ).join('');
+                    break;
+            }
+
+            // Apply separator (replace spaces/underscores/hyphens)
+            if (separator !== ' ') {
+                result = result.replace(/[\s_-]+/g, separator);
+            }
+
+            return prefix + result + suffix;
+        }
+
+        function generateTextTree(folders, prefix = '', isLast = true, isRoot = true) {
+            let result = '';
+            const autoNumber = document.getElementById('autoNumber').checked;
+
+            folders.forEach((folder, index) => {
+                const isLastItem = index === folders.length - 1;
+                const connector = isRoot ? '' : (isLastItem ? '└── ' : '├── ');
+                const childPrefix = isRoot ? '' : (isLastItem ? '    ' : '│   ');
+
+                let folderName = applyNamingConventions(folder.name);
+                if (autoNumber && !isRoot) {
+                    folderName = String(index + 1).padStart(2, '0') + '_' + folderName;
+                }
+
+                result += prefix + connector + folderName + '\n';
+
+                if (folder.children && folder.children.length > 0) {
+                    result += generateTextTree(folder.children, prefix + childPrefix, isLastItem, false);
+                }
+            });
+
+            return result;
+        }
+
+        function generatePaths(folders, parentPath = '') {
+            let paths = [];
+            const projectName = document.getElementById('projectName').value || 'Project';
+            const basePath = parentPath || applyNamingConventions(projectName);
+            const autoNumber = document.getElementById('autoNumber').checked;
+
+            folders.forEach((folder, index) => {
+                let folderName = applyNamingConventions(folder.name);
+                if (autoNumber) {
+                    folderName = String(index + 1).padStart(2, '0') + '_' + folderName;
+                }
+
+                const fullPath = basePath + '/' + folderName;
+                paths.push(fullPath);
+
+                if (folder.children && folder.children.length > 0) {
+                    paths = paths.concat(generatePaths(folder.children, fullPath));
+                }
+            });
+
+            return paths;
+        }
+
+        function updatePreview() {
+            const preview = document.getElementById('previewBox');
+            const projectName = document.getElementById('projectName').value || 'Project';
+
+            if (folderStructure.length === 0) {
+                preview.textContent = '(empty)';
+                return;
+            }
+
+            // Match web version with emoji
+            let text = '\u{1F4C1} ' + applyNamingConventions(projectName) + '\n';
+            text += generateTextTree(folderStructure);
+            preview.textContent = text;
+        }
+
+        function updateStats() {
+            document.getElementById('folderCount').textContent = countFolders(folderStructure);
+            document.getElementById('depthCount').textContent = folderStructure.length ? getMaxDepth(folderStructure) : 0;
+            document.getElementById('templateCount').textContent = customTemplates.length + builtInTemplates.length;
+        }
+
+        // ===== FOLDER CREATION (DESKTOP APP FEATURE) =====
+        let selectedDestination = '';
+
+        async function selectDestination() {
+            if (isElectron) {
+                const result = await window.electronAPI.selectFolder();
+                if (result.success && result.path) {
+                    selectedDestination = result.path;
+                    document.getElementById('destinationPath').value = result.path;
+                    document.getElementById('createStatus').textContent = 'Ready to create folders!';
+                    document.getElementById('createStatus').style.color = 'var(--success)';
+                }
+            } else {
+                showToast('Folder selection requires desktop app', 'error');
+            }
+        }
+
+        async function createFoldersNow() {
+            if (folderStructure.length === 0) {
+                showToast('No folders to create. Add folders first.', 'error');
+                return;
+            }
+
+            const paths = generatePaths(folderStructure);
+
+            if (isElectron) {
+                // Use Electron API to create folders
+                const result = await window.electronAPI.createFolders({
+                    paths,
+                    targetDirectory: selectedDestination || null
+                });
+
+                if (result.success) {
+                    showToast(`Created ${result.created} folders in ${result.targetDir}!`);
+                    document.getElementById('destinationPath').value = result.targetDir;
+                    selectedDestination = result.targetDir;
+                    document.getElementById('createStatus').innerHTML = `<span style="color:var(--success)">Successfully created ${result.created} folders!</span>`;
+                } else {
+                    showToast(result.message || 'Failed to create folders', 'error');
+                }
+            } else {
+                // Web fallback - export batch file
+                showToast('Desktop app required for direct folder creation. Exporting batch file instead.');
+                exportBatch();
+            }
+        }
+
+        // ===== EXPORT FUNCTIONS =====
+        async function exportJSON() {
+            const data = {
+                name: document.getElementById('projectName').value || 'Project',
+                description: '',
+                structure: stripIds(deepClone(folderStructure)),
+                settings: {
+                    prefix: document.getElementById('globalPrefix').value,
+                    suffix: document.getElementById('globalSuffix').value,
+                    separator: document.getElementById('separatorStyle').value,
+                    caseStyle: document.getElementById('caseStyle').value,
+                    autoNumber: document.getElementById('autoNumber').checked
+                }
+            };
+
+            const content = JSON.stringify(data, null, 2);
+            const filename = `${data.name.replace(/\s+/g, '_')}_template.json`;
+
+            if (isElectron) {
+                const result = await window.electronAPI.saveFile({
+                    content,
+                    defaultName: filename,
+                    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+                });
+                if (result.success) showToast('JSON exported!');
+            } else {
+                downloadFile(content, filename, 'application/json');
+                showToast('JSON exported!');
+            }
+        }
+
+        async function exportText() {
+            const projectName = document.getElementById('projectName').value || 'Project';
+            let text = applyNamingConventions(projectName) + '/\n';
+            text += generateTextTree(folderStructure);
+
+            const filename = `${projectName.replace(/\s+/g, '_')}_structure.txt`;
+
+            if (isElectron) {
+                const result = await window.electronAPI.saveFile({
+                    content: text,
+                    defaultName: filename,
+                    filters: [{ name: 'Text Files', extensions: ['txt'] }]
+                });
+                if (result.success) showToast('Text tree exported!');
+            } else {
+                downloadFile(text, filename, 'text/plain');
+                showToast('Text tree exported!');
+            }
+        }
+
+        async function exportBatch() {
+            const paths = generatePaths(folderStructure);
+            const commands = paths.map(p => `mkdir "${p.replace(/\//g, '\\')}"`).join('\n');
+            const batch = `@echo off\necho Creating folder structure...\n${commands}\necho Done!\npause`;
+
+            const projectName = document.getElementById('projectName').value || 'Project';
+            const filename = `create_${projectName.replace(/\s+/g, '_')}.bat`;
+
+            if (isElectron) {
+                const result = await window.electronAPI.saveFile({
+                    content: batch,
+                    defaultName: filename,
+                    filters: [{ name: 'Batch Files', extensions: ['bat'] }]
+                });
+                if (result.success) showToast('Windows batch file exported!');
+            } else {
+                downloadFile(batch, filename, 'text/plain');
+                showToast('Windows batch file exported!');
+            }
+        }
+
+        async function exportShell() {
+            const paths = generatePaths(folderStructure);
+            const commands = paths.map(p => `mkdir -p "${p}"`).join('\n');
+            const shell = `#!/bin/bash\necho "Creating folder structure..."\n${commands}\necho "Done!"`;
+
+            const projectName = document.getElementById('projectName').value || 'Project';
+            const filename = `create_${projectName.replace(/\s+/g, '_')}.sh`;
+
+            if (isElectron) {
+                const result = await window.electronAPI.saveFile({
+                    content: shell,
+                    defaultName: filename,
+                    filters: [{ name: 'Shell Scripts', extensions: ['sh'] }]
+                });
+                if (result.success) showToast('Shell script exported!');
+            } else {
+                downloadFile(shell, filename, 'text/plain');
+                showToast('Shell script exported!');
+            }
+        }
+
+        function copyToClipboard() {
+            const projectName = document.getElementById('projectName').value || 'Project';
+            let text = applyNamingConventions(projectName) + '/\n';
+            text += generateTextTree(folderStructure);
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    loadImportedData(data);
+                } catch (err) {
+                    showToast('Failed to parse JSON', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function loadImportedData(data) {
+            if (data.structure) {
+                folderStructure = addIdsToStructure(data.structure);
+                document.getElementById('projectName').value = data.name || 'Imported';
+
+                if (data.settings) {
+                    document.getElementById('globalPrefix').value = data.settings.prefix || '';
+                    document.getElementById('globalSuffix').value = data.settings.suffix || '';
+                    document.getElementById('separatorStyle').value = data.settings.separator || '_';
+                    document.getElementById('caseStyle').value = data.settings.caseStyle || 'original';
+                    document.getElementById('autoNumber').checked = data.settings.autoNumber || false;
+                }
+
+                renderTree();
+                updateStats();
+                showToast('Template imported!');
+            } else {
+                showToast('Invalid template format', 'error');
+            }
+        }
+
+        // ===== ELECTRON INTEGRATION =====
+        function setupElectronListeners() {
+            if (!isElectron) return;
+
+            // Menu actions
+            window.electronAPI.onMenuAction((action) => {
+                switch (action) {
+                    case 'new':
+                        if (confirm('Clear current structure and start new?')) {
+                            folderStructure = [];
+                            document.getElementById('projectName').value = 'My Project';
+                            renderTree();
+                            updateStats();
+                        }
+                        break;
+                    case 'export-json':
+                        exportJSON();
+                        break;
+                    case 'expand-all':
+                        expandAll();
+                        break;
+                    case 'collapse-all':
+                        collapseAll();
+                        break;
+                }
+            });
+
+            // Import template from file dialog
+            window.electronAPI.onImportTemplate((data) => {
+                loadImportedData(data);
+            });
+
+            // WebSocket status updates
+            window.electronAPI.onWSStatus((status) => {
+                const wsStatusEl = document.getElementById('wsStatus');
+                if (status.status === 'started') {
+                    wsStatusEl.className = 'ws-status connected';
+                    wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>WS:' + status.port + '</span>';
+                    showToast('WebSocket server started on port ' + status.port);
+                } else if (status.status === 'stopped') {
+                    wsStatusEl.className = 'ws-status disconnected';
+                    wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>Offline</span>';
+                } else if (status.status === 'error') {
+                    showToast('WebSocket error: ' + status.error, 'error');
+                }
+            });
+
+            // WebSocket commands
+            window.electronAPI.onWSLoadTemplate((template) => {
+                loadTemplate(template.id, template.isCustom || false);
+            });
+
+            window.electronAPI.onWSCreateFolders(async (data) => {
+                const result = await window.electronAPI.createFolders(data);
+                showToast(result.message);
+            });
+
+            window.electronAPI.onWSGetTemplates(() => {
+                window.electronAPI.sendTemplates([...customTemplates, ...builtInTemplates]);
+            });
+
+            // Sync state to WebSocket clients
+            window.electronAPI.onGetCurrentState(() => {
+                window.electronAPI.broadcastState({
+                    structure: folderStructure,
+                    projectName: document.getElementById('projectName').value,
+                    templates: [...customTemplates, ...builtInTemplates]
+                });
+            });
+        }
+
+        // ===== EVENT LISTENERS =====
+        document.getElementById('globalPrefix').addEventListener('input', updatePreview);
+        document.getElementById('globalSuffix').addEventListener('input', updatePreview);
+        document.getElementById('separatorStyle').addEventListener('change', updatePreview);
+        document.getElementById('caseStyle').addEventListener('change', updatePreview);
+        document.getElementById('autoNumber').addEventListener('change', updatePreview);
+        document.getElementById('projectName').addEventListener('input', updatePreview);
+
+        // ===== INITIALIZATION =====
+        function init() {
+            loadCustomTemplates();
+            renderTemplates();
+            renderTree();
+            updateStats();
+            updatePreview();
+            setupElectronListeners();
+        }
+
+        init();
+    </script>
+</body>
+</html>

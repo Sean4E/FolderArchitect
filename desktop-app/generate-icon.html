@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Folder Architect - Icon Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0a0a0f 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            min-height: 100vh;
+        }
+        h1 { margin-bottom: 10px; }
+        .subtitle { color: #8888a0; margin-bottom: 30px; }
+        .canvas-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 30px 0;
+        }
+        .canvas-box {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .canvas-box h3 {
+            margin: 10px 0 5px;
+            font-size: 14px;
+        }
+        .canvas-box p {
+            font-size: 12px;
+            color: #8888a0;
+            margin: 0;
+        }
+        canvas {
+            border-radius: 20%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        }
+        button.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .instructions {
+            max-width: 700px;
+            margin: 40px auto;
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .instructions h3 { color: #fbbf24; margin-bottom: 15px; }
+        .instructions ol { padding-left: 20px; line-height: 1.8; }
+        .instructions code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        a { color: #6366f1; }
+    </style>
+</head>
+<body>
+    <h1>Folder Architect Icon Generator</h1>
+    <p class="subtitle">Electron-style icon with folder + structure design</p>
+
+    <div class="canvas-container">
+        <div class="canvas-box">
+            <canvas id="icon512" width="512" height="512"></canvas>
+            <h3>512x512</h3>
+            <p>Master icon</p>
+        </div>
+        <div class="canvas-box">
+            <canvas id="icon256" width="256" height="256"></canvas>
+            <h3>256x256</h3>
+            <p>Standard</p>
+        </div>
+        <div class="canvas-box">
+            <canvas id="icon64" width="64" height="64"></canvas>
+            <h3>64x64</h3>
+            <p>Taskbar</p>
+        </div>
+        <div class="canvas-box">
+            <canvas id="icon32" width="32" height="32"></canvas>
+            <h3>32x32</h3>
+            <p>Small</p>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button onclick="downloadPNG('icon512', 'icon-512.png')">Download 512px PNG</button>
+        <button onclick="downloadPNG('icon256', 'icon-256.png')">Download 256px PNG</button>
+        <button class="success" onclick="downloadAllSizes()">Download All Sizes</button>
+    </div>
+
+    <div class="instructions">
+        <h3>How to Create ICO File for Windows</h3>
+        <ol>
+            <li>Click <strong>"Download All Sizes"</strong> above</li>
+            <li>Go to <a href="https://icoconvert.com/" target="_blank">icoconvert.com</a> or <a href="https://convertico.com/" target="_blank">convertico.com</a></li>
+            <li>Upload the <code>icon-256.png</code> file</li>
+            <li>Select sizes: 16, 32, 48, 64, 128, 256</li>
+            <li>Download the ICO file</li>
+            <li>Save as <code>icon.ico</code> in the <code>desktop-app/assets/</code> folder</li>
+            <li>Also save <code>icon-256.png</code> as <code>icon.png</code> in the same folder</li>
+        </ol>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const scale = size / 512;
+
+            // Clear
+            ctx.clearRect(0, 0, size, size);
+
+            // Background - Electron-style rounded square with gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+            bgGrad.addColorStop(0, '#2d3748');
+            bgGrad.addColorStop(0.5, '#1a202c');
+            bgGrad.addColorStop(1, '#171923');
+
+            // Rounded rectangle
+            const radius = 100 * scale;
+            ctx.beginPath();
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fillStyle = bgGrad;
+            ctx.fill();
+
+            // Subtle inner glow
+            const innerGlow = ctx.createRadialGradient(
+                size * 0.3, size * 0.3, 0,
+                size * 0.5, size * 0.5, size * 0.7
+            );
+            innerGlow.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+            innerGlow.addColorStop(0.5, 'rgba(99, 102, 241, 0.05)');
+            innerGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = innerGlow;
+            ctx.fill();
+
+            // Main folder - centered and prominent
+            const folderGrad = ctx.createLinearGradient(
+                80 * scale, 100 * scale,
+                432 * scale, 400 * scale
+            );
+            folderGrad.addColorStop(0, '#fbbf24');
+            folderGrad.addColorStop(1, '#f59e0b');
+
+            // Folder shadow
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            ctx.shadowBlur = 30 * scale;
+            ctx.shadowOffsetY = 10 * scale;
+
+            // Main folder body
+            ctx.beginPath();
+            ctx.moveTo(70 * scale, 180 * scale);
+            ctx.lineTo(70 * scale, 390 * scale);
+            ctx.quadraticCurveTo(70 * scale, 420 * scale, 100 * scale, 420 * scale);
+            ctx.lineTo(412 * scale, 420 * scale);
+            ctx.quadraticCurveTo(442 * scale, 420 * scale, 442 * scale, 390 * scale);
+            ctx.lineTo(442 * scale, 200 * scale);
+            ctx.quadraticCurveTo(442 * scale, 170 * scale, 412 * scale, 170 * scale);
+            ctx.lineTo(280 * scale, 170 * scale);
+            ctx.lineTo(240 * scale, 130 * scale);
+            ctx.lineTo(100 * scale, 130 * scale);
+            ctx.quadraticCurveTo(70 * scale, 130 * scale, 70 * scale, 160 * scale);
+            ctx.closePath();
+            ctx.fillStyle = folderGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // Folder tab highlight
+            ctx.beginPath();
+            ctx.moveTo(70 * scale, 180 * scale);
+            ctx.lineTo(70 * scale, 160 * scale);
+            ctx.quadraticCurveTo(70 * scale, 130 * scale, 100 * scale, 130 * scale);
+            ctx.lineTo(240 * scale, 130 * scale);
+            ctx.lineTo(280 * scale, 170 * scale);
+            ctx.lineTo(280 * scale, 180 * scale);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.fill();
+
+            // Structure lines inside folder (the "architect" part)
+            const lineColor = '#6366f1';
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 6 * scale;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Vertical trunk
+            ctx.beginPath();
+            ctx.moveTo(140 * scale, 230 * scale);
+            ctx.lineTo(140 * scale, 370 * scale);
+            ctx.stroke();
+
+            // Horizontal branches
+            const branches = [
+                { y: 260, len: 60 },
+                { y: 310, len: 60 },
+                { y: 360, len: 60 }
+            ];
+
+            branches.forEach(b => {
+                ctx.beginPath();
+                ctx.moveTo(140 * scale, b.y * scale);
+                ctx.lineTo((140 + b.len) * scale, b.y * scale);
+                ctx.stroke();
+            });
+
+            // Mini folder icons at branch ends
+            const minifolderColor = ctx.createLinearGradient(0, 0, size, size);
+            minifolderColor.addColorStop(0, '#818cf8');
+            minifolderColor.addColorStop(1, '#6366f1');
+
+            const miniPositions = [
+                { x: 205, y: 248 },
+                { x: 205, y: 298 },
+                { x: 205, y: 348 }
+            ];
+
+            miniPositions.forEach(pos => {
+                // Mini folder body
+                ctx.beginPath();
+                ctx.roundRect(pos.x * scale, pos.y * scale, 55 * scale, 32 * scale, 5 * scale);
+                ctx.fillStyle = minifolderColor;
+                ctx.fill();
+
+                // Mini folder tab
+                ctx.beginPath();
+                ctx.moveTo(pos.x * scale, (pos.y + 6) * scale);
+                ctx.lineTo(pos.x * scale, (pos.y + 2) * scale);
+                ctx.quadraticCurveTo(pos.x * scale, pos.y * scale, (pos.x + 4) * scale, pos.y * scale);
+                ctx.lineTo((pos.x + 20) * scale, pos.y * scale);
+                ctx.lineTo((pos.x + 25) * scale, (pos.y + 5) * scale);
+                ctx.lineTo((pos.x + 51) * scale, (pos.y + 5) * scale);
+                ctx.quadraticCurveTo((pos.x + 55) * scale, (pos.y + 5) * scale, (pos.x + 55) * scale, (pos.y + 9) * scale);
+                ctx.lineTo((pos.x + 55) * scale, (pos.y + 6) * scale);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fill();
+            });
+
+            // Sub-branch from first folder
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 4 * scale;
+            ctx.beginPath();
+            ctx.moveTo(265 * scale, 260 * scale);
+            ctx.lineTo(265 * scale, 290 * scale);
+            ctx.lineTo(305 * scale, 290 * scale);
+            ctx.stroke();
+
+            // Tiny folder at sub-branch
+            ctx.beginPath();
+            ctx.roundRect(310 * scale, 278 * scale, 45 * scale, 26 * scale, 4 * scale);
+            ctx.fillStyle = minifolderColor;
+            ctx.fill();
+
+            // Plus icon in bottom right (create action)
+            const plusGrad = ctx.createLinearGradient(
+                350 * scale, 350 * scale,
+                420 * scale, 420 * scale
+            );
+            plusGrad.addColorStop(0, '#10b981');
+            plusGrad.addColorStop(1, '#059669');
+
+            ctx.save();
+            ctx.shadowColor = 'rgba(16, 185, 129, 0.5)';
+            ctx.shadowBlur = 15 * scale;
+
+            ctx.beginPath();
+            ctx.arc(385 * scale, 385 * scale, 42 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = plusGrad;
+            ctx.fill();
+            ctx.restore();
+
+            // Plus sign
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 6 * scale;
+            ctx.beginPath();
+            ctx.moveTo(385 * scale, 362 * scale);
+            ctx.lineTo(385 * scale, 408 * scale);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(362 * scale, 385 * scale);
+            ctx.lineTo(408 * scale, 385 * scale);
+            ctx.stroke();
+        }
+
+        function downloadPNG(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAllSizes() {
+            setTimeout(() => downloadPNG('icon512', 'icon-512.png'), 0);
+            setTimeout(() => downloadPNG('icon256', 'icon-256.png'), 100);
+            setTimeout(() => downloadPNG('icon64', 'icon-64.png'), 200);
+            setTimeout(() => downloadPNG('icon32', 'icon-32.png'), 300);
+        }
+
+        // Draw all icons on load
+        ['icon512', 'icon256', 'icon64', 'icon32'].forEach(id => {
+            drawIcon(document.getElementById(id));
+        });
+    </script>
+</body>
+</html>

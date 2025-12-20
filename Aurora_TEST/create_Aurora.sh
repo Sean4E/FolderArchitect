@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "Creating folder structure..."
+mkdir -p "Aurora/01_Phoenix"
+mkdir -p "Aurora/02_YaoGuai"
+mkdir -p "Aurora/03_BlueBird"
+mkdir -p "Aurora/04_FloodDragon"
+mkdir -p "Aurora/05_XieZhi"
+mkdir -p "Aurora/06_TianGou"
+mkdir -p "Aurora/07_Warrior"
+mkdir -p "Aurora/08_NianBeast"
+mkdir -p "Aurora/09_TaoTie"
+echo "Done!"

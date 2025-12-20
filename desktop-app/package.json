@@ -1,0 +1,88 @@
+{
+  "name": "folder-architect",
+  "version": "1.0.0",
+  "description": "Powerful folder structure builder - Create any folder structure with infinite subfolders",
+  "main": "main.js",
+  "author": "4E",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --x64 && npm run set-icon",
+    "build:portable": "electron-builder --win portable --x64",
+    "build:installer": "electron-builder --win nsis --x64",
+    "set-icon": "rcedit dist/win-unpacked/\"Folder Architect.exe\" --set-icon assets/icon.ico && rcedit dist/FolderArchitect-Portable-1.0.0.exe --set-icon assets/icon.ico"
+  },
+  "build": {
+    "appId": "com.4e.folder-architect",
+    "productName": "Folder Architect",
+    "copyright": "Copyright 2024 4E",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "publisherName": "4E",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "shortcutName": "Folder Architect"
+    },
+    "portable": {
+      "artifactName": "FolderArchitect-Portable-${version}.exe",
+      "useZip": false
+    },
+    "icon": "assets/icon.ico",
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!generate-icon.html",
+      "!*.vbs",
+      "!README.txt",
+      "!*.log"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/",
+        "to": "assets/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asar": true
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "png-to-ico": "^3.0.1",
+    "rcedit": "^4.0.1",
+    "sharp": "^0.34.5",
+    "to-ico": "^1.1.5"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}
