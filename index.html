@@ -2056,9 +2056,13 @@
 
         // ===== PANEL COLLAPSE =====
         function togglePanel(panelId) {
+            console.log('togglePanel called with:', panelId);
             const panel = document.getElementById(panelId);
+            console.log('panel found:', panel);
             if (panel) {
+                const wasCollapsed = panel.classList.contains('collapsed');
                 panel.classList.toggle('collapsed');
+                console.log('Panel was collapsed:', wasCollapsed, 'now:', panel.classList.contains('collapsed'));
                 // Save state to localStorage
                 const collapsed = {
                     leftPanel: document.getElementById('leftPanel')?.classList.contains('collapsed') || false,
