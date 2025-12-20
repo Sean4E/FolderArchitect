@@ -61,15 +61,26 @@
             position: relative;
             z-index: 1;
             display: grid;
-            grid-template-columns: 320px 1fr 360px;
+            grid-template-columns: auto 1fr auto;
             gap: 20px;
             padding: 20px;
             min-height: 100vh;
         }
 
+        .app .panel:first-child:not(.collapsed) {
+            width: 320px;
+        }
+
+        .app .panel:last-child:not(.collapsed) {
+            width: 360px;
+        }
+
         @media (max-width: 1200px) {
             .app {
                 grid-template-columns: 1fr;
+            }
+            .app .panel.collapsed {
+                display: none;
             }
         }
 
@@ -83,6 +94,69 @@
             flex-direction: column;
             max-height: calc(100vh - 40px);
             overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .panel.collapsed {
+            width: 48px;
+            min-width: 48px;
+            padding: 12px;
+        }
+
+        .panel.collapsed .panel-content,
+        .panel.collapsed .panel-header .panel-title span,
+        .panel.collapsed .panel-footer {
+            display: none;
+        }
+
+        .panel.collapsed .panel-header {
+            flex-direction: column;
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .panel.collapsed .panel-title {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            margin-top: 12px;
+        }
+
+        .panel.collapsed .panel-title svg {
+            transform: rotate(180deg);
+            margin-bottom: 8px;
+        }
+
+        .collapse-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-dim);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .collapse-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .collapse-btn svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s;
+        }
+
+        .panel.collapsed .collapse-btn svg {
+            transform: rotate(180deg);
         }
 
         .panel-header {
@@ -310,6 +384,16 @@
 
         .btn-danger:hover {
             background: rgba(239, 68, 68, 0.1);
+        }
+
+        .btn-success {
+            background: transparent;
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .btn-success:hover {
+            background: rgba(16, 185, 129, 0.1);
         }
 
         .btn-sm {
@@ -928,7 +1012,7 @@
 
     <div class="app">
         <!-- Templates Panel -->
-        <div class="panel">
+        <div class="panel" id="leftPanel">
             <div class="panel-header">
                 <div class="panel-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -937,17 +1021,40 @@
                         <rect x="14" y="14" width="7" height="7"/>
                         <rect x="3" y="14" width="7" height="7"/>
                     </svg>
-                    Templates
+                    <span>Templates</span>
                 </div>
-                <div class="ws-status disconnected" id="wsStatus">
-                    <span class="ws-dot"></span>
-                    <span>Offline</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="ws-status disconnected" id="wsStatus">
+                        <span class="ws-dot"></span>
+                        <span>Offline</span>
+                    </div>
+                    <button class="collapse-btn" onclick="togglePanel('leftPanel')" title="Collapse panel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
             <div class="panel-content" id="templatesPanel">
                 <!-- Templates will be populated by JS -->
             </div>
-            <div style="padding-top: 12px; border-top: 1px solid var(--border); margin-top: auto; display: flex; gap: 8px;">
+            <!-- Sync Settings -->
+            <div class="panel-footer" style="padding: 12px; border-top: 1px solid var(--border); margin-top: auto;">
+                <div style="margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync Settings</div>
+                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="width: 80px; padding: 6px 8px; font-size: 12px;">
+                    <input type="text" class="input-field" id="wsIdentifier" placeholder="Identifier" value="default" style="flex: 1; padding: 6px 8px; font-size: 12px;">
+                </div>
+                <button class="btn btn-sm" onclick="toggleWSServer()" id="wsToggleBtn" style="width: 100%; margin-bottom: 8px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    Start Sync Server
+                </button>
+            </div>
+            <div class="panel-footer" style="padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
                 <button class="btn btn-sm" onclick="exportSavedTemplates()" title="Export your saved templates to a file">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1015,6 +1122,15 @@
                     Collapse
                 </button>
                 <div class="toolbar-divider"></div>
+                <button class="btn btn-sm btn-success" onclick="newStructure()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="12" y1="18" x2="12" y2="12"/>
+                        <line x1="9" y1="15" x2="15" y2="15"/>
+                    </svg>
+                    New
+                </button>
                 <button class="btn btn-sm btn-danger" onclick="clearAll()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/>
@@ -1053,14 +1169,19 @@
         </div>
 
         <!-- Settings & Export Panel -->
-        <div class="panel">
+        <div class="panel" id="rightPanel">
             <div class="panel-header">
+                <button class="collapse-btn" onclick="togglePanel('rightPanel')" title="Collapse panel">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
                 <div class="panel-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
                     </svg>
-                    Settings & Export
+                    <span>Settings & Export</span>
                 </div>
             </div>
             <div class="panel-content">
@@ -2110,13 +2231,13 @@
         function addRootFolder() {
             const newFolder = {
                 id: generateId(),
-                name: 'New Folder',
-                children: []
+                name: 'Root Folder',
+                children: [...folderStructure] // Move all existing folders as children
             };
-            // Add at the TOP of the list, not the bottom
-            folderStructure.unshift(newFolder);
+            folderStructure = [newFolder];
             renderTree();
             updateStats();
+            updatePreview();
             startEditing(newFolder.id);
         }
 
@@ -2334,6 +2455,79 @@
                 renderTree();
                 updateStats();
                 showToast('Structure cleared');
+            }
+        }
+
+        function newStructure() {
+            if (folderStructure.length > 0) {
+                if (!confirm('Start a new structure? Current structure will be cleared.')) {
+                    return;
+                }
+            }
+            folderStructure = [];
+            selectedFolderId = null;
+            document.getElementById('projectName').value = 'New Project';
+            renderTree();
+            updateStats();
+            updatePreview();
+            showToast('New structure ready', 'success');
+        }
+
+        // ===== PANEL COLLAPSE =====
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            if (panel) {
+                panel.classList.toggle('collapsed');
+                // Save state to localStorage
+                const collapsed = {
+                    leftPanel: document.getElementById('leftPanel')?.classList.contains('collapsed') || false,
+                    rightPanel: document.getElementById('rightPanel')?.classList.contains('collapsed') || false
+                };
+                localStorage.setItem('folderArchitect_panelState', JSON.stringify(collapsed));
+            }
+        }
+
+        function restorePanelState() {
+            try {
+                const saved = localStorage.getItem('folderArchitect_panelState');
+                if (saved) {
+                    const state = JSON.parse(saved);
+                    if (state.leftPanel) {
+                        document.getElementById('leftPanel')?.classList.add('collapsed');
+                    }
+                    if (state.rightPanel) {
+                        document.getElementById('rightPanel')?.classList.add('collapsed');
+                    }
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+        }
+
+        // ===== WEBSOCKET SERVER TOGGLE =====
+        async function toggleWSServer() {
+            if (typeof window.electronAPI === 'undefined') {
+                showToast('WebSocket only available in desktop app', 'warning');
+                return;
+            }
+
+            const config = await window.electronAPI.getWSConfig();
+            const portInput = document.getElementById('wsPort');
+            const identifierInput = document.getElementById('wsIdentifier');
+
+            if (config.isRunning) {
+                // Stop the server
+                await window.electronAPI.stopWSServer();
+            } else {
+                // Update port and identifier before starting
+                const newPort = parseInt(portInput.value, 10) || 9876;
+                const newIdentifier = identifierInput.value || 'default';
+
+                await window.electronAPI.setWSPort(newPort);
+                await window.electronAPI.setWSIdentifier(newIdentifier);
+
+                // Start the server
+                await window.electronAPI.startWSServer();
             }
         }
 
@@ -2661,7 +2855,7 @@
                     folderName = String(index + 1).padStart(2, '0') + '_' + folderName;
                 }
 
-                result += prefix + connector + folderName + '\n';
+                result += prefix + connector + '📁 ' + folderName + '\n';
 
                 if (folder.children && folder.children.length > 0) {
                     result += generateTextTree(folder.children, prefix + childPrefix, isLastItem, false);
@@ -2950,17 +3144,33 @@
             });
 
             // WebSocket status updates
+            let wsServerRunning = false;
+
             window.electronAPI.onWSStatus((status) => {
                 const wsStatusEl = document.getElementById('wsStatus');
+                const wsToggleBtn = document.getElementById('wsToggleBtn');
+
                 if (status.status === 'started') {
+                    wsServerRunning = true;
                     wsStatusEl.className = 'ws-status connected';
                     wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>WS:' + status.port + '</span>';
-                    showToast('WebSocket server started on port ' + status.port);
+                    if (wsToggleBtn) {
+                        wsToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop Server`;
+                        wsToggleBtn.classList.add('btn-danger');
+                    }
+                    showToast('Sync server started on port ' + status.port);
                 } else if (status.status === 'stopped') {
+                    wsServerRunning = false;
                     wsStatusEl.className = 'ws-status disconnected';
                     wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>Offline</span>';
+                    if (wsToggleBtn) {
+                        wsToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> Start Sync Server`;
+                        wsToggleBtn.classList.remove('btn-danger');
+                    }
                 } else if (status.status === 'error') {
                     showToast('WebSocket error: ' + status.error, 'error');
+                } else if (status.status === 'already-running') {
+                    showToast('Server already running on port ' + status.port, 'warning');
                 }
             });
 
@@ -3004,6 +3214,7 @@
             updateStats();
             updatePreview();
             setupElectronListeners();
+            restorePanelState();
         }
 
         init();

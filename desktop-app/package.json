@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "build:win": "electron-builder --win --x64 && npm run set-icon",
+    "build:win": "electron-builder --win --x64",
     "build:portable": "electron-builder --win portable --x64",
     "build:installer": "electron-builder --win nsis --x64",
     "set-icon": "node_modules\\rcedit\\bin\\rcedit-x64.exe release\\win-unpacked\\\"Folder Architect.exe\" --set-icon assets\\icon.ico && node_modules\\rcedit\\bin\\rcedit-x64.exe release\\FolderArchitect-Portable-1.0.0.exe --set-icon assets\\icon.ico"
@@ -37,8 +37,7 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "publisherName": "4E",
-      "signAndEditExecutable": false
+      "publisherName": "4E"
     },
     "nsis": {
       "oneClick": false,

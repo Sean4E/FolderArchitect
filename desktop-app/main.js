@@ -8,8 +8,9 @@ let tray = null;
 let wsServer = null;
 let wsClients = new Set();
 
-// WebSocket server settings
-const WS_PORT = 9876;
+// WebSocket server settings (configurable)
+let wsPort = 9876;
+let wsIdentifier = 'folder-architect-default';
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -143,8 +144,14 @@ function createMenu() {
                 },
                 { type: 'separator' },
                 {
-                    label: `Server Port: ${WS_PORT}`,
-                    enabled: false
+                    label: 'Configure...',
+                    click: () => configureWebSocket()
+                },
+                { type: 'separator' },
+                {
+                    label: `Port: ${wsPort}`,
+                    enabled: false,
+                    id: 'ws-port-label'
                 }
             ]
         },
@@ -299,18 +306,70 @@ ipcMain.handle('read-file', async (event, filePath) => {
 
 // ========== WEBSOCKET SERVER ==========
 
+async function configureWebSocket() {
+    // Use a simple prompt via dialog
+    const { response, checkboxChecked } = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        title: 'Configure WebSocket',
+        message: `Current Settings:\nPort: ${wsPort}\nIdentifier: ${wsIdentifier}\n\nTo change settings, edit the port via the renderer settings panel.`,
+        buttons: ['OK'],
+        defaultId: 0
+    });
+}
+
+// Handler for setting port from renderer
+ipcMain.handle('set-ws-port', async (event, port) => {
+    const newPort = parseInt(port, 10);
+    if (newPort >= 1024 && newPort <= 65535) {
+        wsPort = newPort;
+        createMenu(); // Refresh menu to show new port
+        return { success: true, port: wsPort };
+    }
+    return { success: false, error: 'Port must be between 1024 and 65535' };
+});
+
+ipcMain.handle('set-ws-identifier', async (event, identifier) => {
+    if (identifier && identifier.length > 0) {
+        wsIdentifier = identifier;
+        return { success: true, identifier: wsIdentifier };
+    }
+    return { success: false, error: 'Identifier cannot be empty' };
+});
+
+ipcMain.handle('get-ws-config', async () => {
+    return { port: wsPort, identifier: wsIdentifier, isRunning: wsServer !== null };
+});
+
+// Direct handlers for start/stop from renderer
+ipcMain.handle('start-ws-server', async () => {
+    startWebSocketServer();
+    return { success: true };
+});
+
+ipcMain.handle('stop-ws-server', async () => {
+    stopWebSocketServer();
+    return { success: true };
+});
+
 function startWebSocketServer() {
     if (wsServer) {
-        mainWindow.webContents.send('ws-status', { status: 'already-running', port: WS_PORT });
+        mainWindow.webContents.send('ws-status', { status: 'already-running', port: wsPort });
         return;
     }
 
     try {
-        wsServer = new WebSocket.Server({ port: WS_PORT });
+        wsServer = new WebSocket.Server({ port: wsPort });
 
         wsServer.on('connection', (ws) => {
             wsClients.add(ws);
             console.log('WebSocket client connected');
+
+            // Send welcome message with server identifier
+            ws.send(JSON.stringify({
+                type: 'welcome',
+                identifier: wsIdentifier,
+                port: wsPort
+            }));
 
             // Send current state to new client
             mainWindow.webContents.send('get-current-state');
@@ -336,8 +395,8 @@ function startWebSocketServer() {
         });
 
         wsServer.on('listening', () => {
-            mainWindow.webContents.send('ws-status', { status: 'started', port: WS_PORT });
-            console.log(`WebSocket server started on port ${WS_PORT}`);
+            mainWindow.webContents.send('ws-status', { status: 'started', port: wsPort, identifier: wsIdentifier });
+            console.log(`WebSocket server started on port ${wsPort} (${wsIdentifier})`);
         });
 
         wsServer.on('error', (err) => {

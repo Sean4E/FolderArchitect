@@ -33,6 +33,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     broadcastState: (state) => ipcRenderer.send('broadcast-state', state),
     sendTemplates: (templates) => ipcRenderer.send('send-templates', templates),
 
+    // WebSocket configuration
+    setWSPort: (port) => ipcRenderer.invoke('set-ws-port', port),
+    setWSIdentifier: (identifier) => ipcRenderer.invoke('set-ws-identifier', identifier),
+    getWSConfig: () => ipcRenderer.invoke('get-ws-config'),
+    startWSServer: () => ipcRenderer.invoke('start-ws-server'),
+    stopWSServer: () => ipcRenderer.invoke('stop-ws-server'),
+
     // Platform info
     platform: process.platform
 });
