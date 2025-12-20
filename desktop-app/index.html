@@ -1039,21 +1039,20 @@
             <div class="panel-content" id="templatesPanel">
                 <!-- Templates will be populated by JS -->
             </div>
-            <!-- Sync Settings -->
+            <!-- Sync -->
             <div class="panel-footer" style="padding: 12px; border-top: 1px solid var(--border); margin-top: auto;">
-                <div style="margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync Settings</div>
+                <div style="margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync</div>
                 <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="width: 80px; padding: 6px 8px; font-size: 12px;">
-                    <input type="text" class="input-field" id="wsIdentifier" placeholder="Identifier" value="default" style="flex: 1; padding: 6px 8px; font-size: 12px;">
+                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="flex: 1; padding: 6px 8px; font-size: 12px;">
                 </div>
                 <button class="btn btn-sm" onclick="toggleWSServer()" id="wsToggleBtn" style="width: 100%; margin-bottom: 8px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
                         <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        <polygon points="10 8 16 12 10 16 10 8"/>
                     </svg>
                     Start Sync Server
                 </button>
+                <input type="hidden" id="wsIdentifier" value="default">
             </div>
             <div class="panel-footer" style="padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
                 <button class="btn btn-sm" onclick="exportSavedTemplates()" title="Export your saved templates to a file">

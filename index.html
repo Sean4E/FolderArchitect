@@ -122,7 +122,7 @@
             transition: opacity 0.2s;
         }
 
-        .panel.collapsed:first-child::after {
+        #leftPanel.collapsed::after {
             transform: rotate(180deg);
         }
 
@@ -996,26 +996,26 @@
             <div class="panel-content" id="templatesPanel">
                 <!-- Templates will be populated by JS -->
             </div>
-            <!-- Desktop Sync -->
+            <!-- Sync with Desktop -->
             <div class="panel-footer" style="padding: 12px; border-top: 1px solid var(--border); margin-top: auto;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Desktop Sync</div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync</div>
                     <div class="ws-status disconnected" id="wsStatus" style="font-size: 10px;">
                         <span class="ws-dot" style="width: 6px; height: 6px;"></span>
                         <span>Disconnected</span>
                     </div>
                 </div>
                 <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                    <input type="text" class="input-field" id="wsHost" placeholder="Host" value="localhost" style="flex: 1; padding: 6px 8px; font-size: 12px;">
-                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="width: 70px; padding: 6px 8px; font-size: 12px;">
+                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="flex: 1; padding: 6px 8px; font-size: 12px;">
                 </div>
                 <button class="btn btn-sm" onclick="toggleWSConnection()" id="wsConnectBtn" style="width: 100%;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
-                        <path d="M5 12h14"/>
-                        <path d="M12 5l7 7-7 7"/>
+                        <circle cx="12" cy="12" r="10"/>
+                        <polygon points="10 8 16 12 10 16 10 8"/>
                     </svg>
                     Connect to Desktop
                 </button>
+                <input type="hidden" id="wsHost" value="localhost">
             </div>
             <div class="panel-footer" style="padding-top: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px;">
                 <button class="btn btn-sm" onclick="exportSavedTemplates()" title="Export your saved templates to a file">
