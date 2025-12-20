@@ -17,65 +17,91 @@ let wsIdentifier = 'folder-architect-default';
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
+let updateCheckInProgress = false;
+let isManualCheck = false;
+
 function setupAutoUpdater() {
     autoUpdater.on('checking-for-update', () => {
         console.log('Checking for updates...');
+        mainWindow.webContents.send('update-status', { status: 'checking' });
     });
 
     autoUpdater.on('update-available', (info) => {
         console.log('Update available:', info.version);
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Update Available',
-            message: `A new version (${info.version}) is available!`,
-            detail: 'Would you like to download it now?',
-            buttons: ['Download', 'Later'],
-            defaultId: 0
-        }).then(result => {
-            if (result.response === 0) {
-                autoUpdater.downloadUpdate();
-                mainWindow.webContents.send('update-status', { status: 'downloading', version: info.version });
-            }
+        updateCheckInProgress = false;
+        mainWindow.webContents.send('update-status', {
+            status: 'available',
+            version: info.version,
+            releaseDate: info.releaseDate
         });
     });
 
-    autoUpdater.on('update-not-available', () => {
+    autoUpdater.on('update-not-available', (info) => {
         console.log('No updates available');
+        updateCheckInProgress = false;
+        mainWindow.webContents.send('update-status', {
+            status: 'up-to-date',
+            version: info.version
+        });
     });
 
     autoUpdater.on('download-progress', (progress) => {
         mainWindow.webContents.send('update-status', {
-            status: 'progress',
-            percent: Math.round(progress.percent)
+            status: 'downloading',
+            percent: Math.round(progress.percent),
+            bytesPerSecond: progress.bytesPerSecond,
+            transferred: progress.transferred,
+            total: progress.total
         });
     });
 
     autoUpdater.on('update-downloaded', (info) => {
         console.log('Update downloaded:', info.version);
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Update Ready',
-            message: 'Update downloaded!',
-            detail: 'The update will be installed when you restart the app. Restart now?',
-            buttons: ['Restart Now', 'Later'],
-            defaultId: 0
-        }).then(result => {
-            if (result.response === 0) {
-                autoUpdater.quitAndInstall();
-            }
+        mainWindow.webContents.send('update-status', {
+            status: 'ready',
+            version: info.version
         });
     });
 
     autoUpdater.on('error', (err) => {
         console.error('Auto-updater error:', err);
+        updateCheckInProgress = false;
+        mainWindow.webContents.send('update-status', {
+            status: 'error',
+            message: err.message || 'Unknown error occurred'
+        });
     });
 }
 
-function checkForUpdates() {
+function checkForUpdates(manual = false) {
+    isManualCheck = manual;
+    if (updateCheckInProgress) return;
+    updateCheckInProgress = true;
     autoUpdater.checkForUpdates().catch(err => {
         console.log('Update check failed:', err.message);
+        updateCheckInProgress = false;
+        mainWindow.webContents.send('update-status', {
+            status: 'error',
+            message: err.message || 'Failed to check for updates'
+        });
     });
 }
+
+// IPC handlers for update actions from renderer
+ipcMain.handle('check-for-updates', async () => {
+    checkForUpdates(true);
+    return { success: true };
+});
+
+ipcMain.handle('download-update', async () => {
+    autoUpdater.downloadUpdate();
+    return { success: true };
+});
+
+ipcMain.handle('install-update', async () => {
+    autoUpdater.quitAndInstall();
+    return { success: true };
+});
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -226,14 +252,8 @@ function createMenu() {
                 {
                     label: 'Check for Updates...',
                     click: () => {
-                        checkForUpdates();
-                        dialog.showMessageBox(mainWindow, {
-                            type: 'info',
-                            title: 'Checking for Updates',
-                            message: 'Checking for updates...',
-                            detail: 'You will be notified if an update is available.',
-                            buttons: ['OK']
-                        });
+                        checkForUpdates(true);
+                        mainWindow.webContents.send('show-update-panel');
                     }
                 },
                 { type: 'separator' },

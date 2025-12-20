@@ -998,9 +998,168 @@
         .create-action .settings-title {
             color: var(--success);
         }
+
+        /* Update Modal */
+        .update-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .update-modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .update-modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            width: 380px;
+            max-width: 90vw;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .update-modal-overlay.visible .update-modal {
+            transform: scale(1);
+        }
+
+        .update-modal h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .update-modal h3 svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent);
+        }
+
+        .update-status-text {
+            color: var(--text-dim);
+            font-size: 14px;
+            margin-bottom: 16px;
+            min-height: 20px;
+        }
+
+        .update-version {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .update-progress-container {
+            display: none;
+            margin-bottom: 16px;
+        }
+
+        .update-progress-container.visible {
+            display: block;
+        }
+
+        .update-progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .update-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .update-progress-text {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .update-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .update-actions .btn {
+            min-width: 100px;
+        }
+
+        .update-error {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .update-error.visible {
+            display: block;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <!-- Update Modal -->
+    <div class="update-modal-overlay" id="updateModalOverlay" onclick="if(event.target === this) closeUpdateModal()">
+        <div class="update-modal">
+            <h3>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Software Update
+            </h3>
+            <div class="update-status-text" id="updateStatusText">Checking for updates...</div>
+            <div class="update-error" id="updateError"></div>
+            <div class="update-progress-container" id="updateProgressContainer">
+                <div class="update-progress-bar">
+                    <div class="update-progress-fill" id="updateProgressFill"></div>
+                </div>
+                <div class="update-progress-text" id="updateProgressText">0%</div>
+            </div>
+            <div class="update-actions" id="updateActions">
+                <button class="btn btn-secondary" onclick="closeUpdateModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div class="logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -3221,6 +3380,120 @@
         document.getElementById('autoNumber').addEventListener('change', updatePreview);
         document.getElementById('projectName').addEventListener('input', updatePreview);
 
+        // ===== UPDATE MODAL =====
+        let pendingUpdateVersion = null;
+
+        function showUpdateModal() {
+            document.getElementById('updateModalOverlay').classList.add('visible');
+        }
+
+        function closeUpdateModal() {
+            document.getElementById('updateModalOverlay').classList.remove('visible');
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        function updateModalStatus(status) {
+            const statusText = document.getElementById('updateStatusText');
+            const errorDiv = document.getElementById('updateError');
+            const progressContainer = document.getElementById('updateProgressContainer');
+            const progressFill = document.getElementById('updateProgressFill');
+            const progressText = document.getElementById('updateProgressText');
+            const actionsDiv = document.getElementById('updateActions');
+
+            // Reset states
+            errorDiv.classList.remove('visible');
+            progressContainer.classList.remove('visible');
+
+            switch (status.status) {
+                case 'checking':
+                    statusText.innerHTML = '<span class="spinner" style="display:inline-block;vertical-align:middle;margin-right:8px;"></span> Checking for updates...';
+                    actionsDiv.innerHTML = '<button class="btn btn-secondary" onclick="closeUpdateModal()">Cancel</button>';
+                    break;
+
+                case 'available':
+                    pendingUpdateVersion = status.version;
+                    statusText.innerHTML = `Update available: <span class="update-version">v${status.version}</span>`;
+                    actionsDiv.innerHTML = `
+                        <button class="btn btn-secondary" onclick="closeUpdateModal()">Later</button>
+                        <button class="btn btn-primary" onclick="startDownload()">Download Update</button>
+                    `;
+                    break;
+
+                case 'up-to-date':
+                    statusText.innerHTML = 'You\'re running the latest version.';
+                    actionsDiv.innerHTML = '<button class="btn btn-primary" onclick="closeUpdateModal()">OK</button>';
+                    break;
+
+                case 'downloading':
+                    statusText.innerHTML = `Downloading v${pendingUpdateVersion || 'update'}...`;
+                    progressContainer.classList.add('visible');
+                    progressFill.style.width = status.percent + '%';
+                    if (status.total) {
+                        progressText.textContent = `${status.percent}% — ${formatBytes(status.transferred)} / ${formatBytes(status.total)}`;
+                    } else {
+                        progressText.textContent = status.percent + '%';
+                    }
+                    actionsDiv.innerHTML = '<button class="btn btn-secondary" disabled>Downloading...</button>';
+                    break;
+
+                case 'ready':
+                    pendingUpdateVersion = status.version;
+                    statusText.innerHTML = `Update v${status.version} is ready to install!`;
+                    actionsDiv.innerHTML = `
+                        <button class="btn btn-secondary" onclick="closeUpdateModal()">Later</button>
+                        <button class="btn btn-success" onclick="installUpdate()">Restart & Install</button>
+                    `;
+                    break;
+
+                case 'error':
+                    statusText.textContent = 'Update check failed';
+                    errorDiv.textContent = status.message || 'An unknown error occurred';
+                    errorDiv.classList.add('visible');
+                    actionsDiv.innerHTML = `
+                        <button class="btn btn-secondary" onclick="closeUpdateModal()">Close</button>
+                        <button class="btn btn-primary" onclick="retryUpdateCheck()">Retry</button>
+                    `;
+                    break;
+            }
+        }
+
+        function startDownload() {
+            if (isElectron && window.electronAPI.downloadUpdate) {
+                window.electronAPI.downloadUpdate();
+            }
+        }
+
+        function installUpdate() {
+            if (isElectron && window.electronAPI.installUpdate) {
+                window.electronAPI.installUpdate();
+            }
+        }
+
+        function retryUpdateCheck() {
+            if (isElectron && window.electronAPI.checkForUpdates) {
+                window.electronAPI.checkForUpdates();
+            }
+        }
+
+        function setupUpdateListeners() {
+            if (!isElectron) return;
+
+            // Listen for update status from main process
+            window.electronAPI.onUpdateStatus((status) => {
+                updateModalStatus(status);
+            });
+
+            // Listen for show update panel request from menu
+            window.electronAPI.onShowUpdatePanel(() => {
+                showUpdateModal();
+            });
+        }
+
         // ===== INITIALIZATION =====
         function init() {
             loadCustomTemplates();
@@ -3229,6 +3502,7 @@
             updateStats();
             updatePreview();
             setupElectronListeners();
+            setupUpdateListeners();
             restorePanelState();
             setupPanelClickExpand();
         }

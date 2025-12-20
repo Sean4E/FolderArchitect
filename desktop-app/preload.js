@@ -40,6 +40,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     startWSServer: () => ipcRenderer.invoke('start-ws-server'),
     stopWSServer: () => ipcRenderer.invoke('stop-ws-server'),
 
+    // Auto-updater
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+    downloadUpdate: () => ipcRenderer.invoke('download-update'),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
+    onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, status) => callback(status)),
+    onShowUpdatePanel: (callback) => ipcRenderer.on('show-update-panel', () => callback()),
+
     // Platform info
     platform: process.platform
 });
