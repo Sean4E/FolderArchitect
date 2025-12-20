@@ -10,7 +10,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 
 ' Get the directory where this script is located
 appPath = fso.GetParentFolderName(WScript.ScriptFullName)
-distPath = appPath & "\dist"
+distPath = appPath & "\release"
 
 ' Check if node_modules exists
 If Not fso.FolderExists(appPath & "\node_modules") Then

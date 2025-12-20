@@ -4,6 +4,7 @@ desktop-app/node_modules/
 
 # Build output
 desktop-app/dist/
+desktop-app/release/
 
 # Logs
 *.log
