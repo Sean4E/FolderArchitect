@@ -2072,14 +2072,14 @@
             }
         }
 
-        // Allow clicking collapsed panel to expand
+        // Allow clicking collapsed panel to expand (only the ::after pseudo-element area)
         function setupPanelClickExpand() {
             ['leftPanel', 'rightPanel'].forEach(id => {
                 const panel = document.getElementById(id);
                 if (panel) {
                     panel.addEventListener('click', (e) => {
-                        if (panel.classList.contains('collapsed')) {
-                            e.stopPropagation();
+                        // Only expand if collapsed AND click is directly on the panel (not children)
+                        if (panel.classList.contains('collapsed') && e.target === panel) {
                             togglePanel(id);
                         }
                     });
