@@ -96,34 +96,46 @@
         }
 
         .panel.collapsed {
-            width: 48px;
-            min-width: 48px;
-            padding: 12px;
+            width: 44px;
+            min-width: 44px;
+            padding: 10px;
+            cursor: pointer;
         }
 
         .panel.collapsed .panel-content,
-        .panel.collapsed .panel-header .panel-title span,
-        .panel.collapsed .panel-footer {
+        .panel.collapsed .panel-footer,
+        .panel.collapsed .panel-header .panel-title,
+        .panel.collapsed .panel-header .collapse-btn {
             display: none;
         }
 
         .panel.collapsed .panel-header {
-            flex-direction: column;
+            justify-content: center;
             margin-bottom: 0;
             padding-bottom: 0;
             border-bottom: none;
         }
 
-        .panel.collapsed .panel-title {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            margin-top: 12px;
+        /* Show expand icon when collapsed */
+        .panel.collapsed::after {
+            content: '';
+            display: block;
+            width: 24px;
+            height: 24px;
+            margin: auto;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238888a0' stroke-width='2'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0.7;
+            transition: opacity 0.2s;
         }
 
-        .panel.collapsed .panel-title svg {
+        .panel.collapsed:first-child::after {
             transform: rotate(180deg);
-            margin-bottom: 8px;
+        }
+
+        .panel.collapsed:hover::after {
+            opacity: 1;
         }
 
         .collapse-btn {
@@ -150,11 +162,6 @@
         .collapse-btn svg {
             width: 14px;
             height: 14px;
-            transition: transform 0.3s;
-        }
-
-        .panel.collapsed .collapse-btn svg {
-            transform: rotate(180deg);
         }
 
         .panel-header {
@@ -2069,6 +2076,21 @@
             }
         }
 
+        // Allow clicking collapsed panel to expand
+        function setupPanelClickExpand() {
+            ['leftPanel', 'rightPanel'].forEach(id => {
+                const panel = document.getElementById(id);
+                if (panel) {
+                    panel.addEventListener('click', (e) => {
+                        if (panel.classList.contains('collapsed')) {
+                            e.stopPropagation();
+                            togglePanel(id);
+                        }
+                    });
+                }
+            });
+        }
+
         function restorePanelState() {
             try {
                 const saved = localStorage.getItem('folderArchitect_panelState');
@@ -2747,6 +2769,7 @@
             updatePreview();
             restorePanelState();
             restoreWSSettings();
+            setupPanelClickExpand();
         }
 
         init();
