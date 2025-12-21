@@ -1,6 +1,6 @@
 {
   "name": "folder-architect",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Powerful folder structure builder - Create any folder structure with infinite subfolders",
   "main": "main.js",
   "author": "4E",
@@ -93,6 +93,7 @@
     "to-ico": "^1.1.5"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "electron-updater": "^6.6.2",
     "ws": "^8.14.2"
   }

@@ -55,6 +55,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, status) => callback(status)),
     onShowUpdatePanel: (callback) => ipcRenderer.on('show-update-panel', () => callback()),
 
+    // Supabase cloud sync
+    supabaseSignIn: (email, password) => ipcRenderer.invoke('supabase-signin', email, password),
+    supabaseSignUp: (email, password) => ipcRenderer.invoke('supabase-signup', email, password),
+    supabaseSignOut: () => ipcRenderer.invoke('supabase-signout'),
+    supabaseGetSession: () => ipcRenderer.invoke('supabase-get-session'),
+    supabaseLoadTemplates: () => ipcRenderer.invoke('supabase-load-templates'),
+    supabaseUploadTemplate: (template) => ipcRenderer.invoke('supabase-upload-template', template),
+    supabaseDeleteTemplate: (templateId) => ipcRenderer.invoke('supabase-delete-template', templateId),
+    onSupabaseAuthChange: (callback) => ipcRenderer.on('supabase-auth-change', (event, data) => callback(data)),
+    onSupabaseTemplateChange: (callback) => ipcRenderer.on('supabase-template-change', (event, data) => callback(data)),
+
     // Platform info
     platform: process.platform
 });

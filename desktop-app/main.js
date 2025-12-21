@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
 const { autoUpdater } = require('electron-updater');
+const { createClient } = require('@supabase/supabase-js');
 
 let mainWindow;
 let tray = null;
@@ -12,6 +13,29 @@ let wsClients = new Set();
 // WebSocket server settings (configurable)
 let wsPort = 9876;
 let wsIdentifier = 'folder-architect-default';
+
+// ========== SUPABASE CONFIG ==========
+// Replace with your Supabase credentials
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+let supabase = null;
+let currentUser = null;
+let realtimeSubscription = null;
+
+function initSupabase() {
+    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_URL.includes('supabase.co')) {
+        console.log('Supabase not configured - running in local mode');
+        return false;
+    }
+    try {
+        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return true;
+    } catch (e) {
+        console.error('Failed to initialize Supabase:', e);
+        return false;
+    }
+}
 
 // ========== AUTO UPDATER ==========
 autoUpdater.autoDownload = false;
@@ -600,10 +624,144 @@ ipcMain.on('broadcast-template-deleted', (event, templateId) => {
     });
 });
 
+// ========== SUPABASE IPC HANDLERS ==========
+
+ipcMain.handle('supabase-signin', async (event, email, password) => {
+    if (!supabase) return { error: 'Supabase not configured' };
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return { error: error.message };
+        currentUser = data.user;
+        mainWindow.webContents.send('supabase-auth-change', { user: currentUser });
+        startSupabaseRealtime();
+        return { user: currentUser };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-signup', async (event, email, password) => {
+    if (!supabase) return { error: 'Supabase not configured' };
+    try {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) return { error: error.message };
+        return { user: data.user, message: 'Check your email to verify your account' };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-signout', async () => {
+    if (!supabase) return { error: 'Supabase not configured' };
+    try {
+        await supabase.auth.signOut();
+        currentUser = null;
+        stopSupabaseRealtime();
+        mainWindow.webContents.send('supabase-auth-change', { user: null });
+        return { success: true };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-get-session', async () => {
+    if (!supabase) return { user: null };
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            return { user: currentUser };
+        }
+        return { user: null };
+    } catch (e) {
+        return { user: null };
+    }
+});
+
+ipcMain.handle('supabase-load-templates', async () => {
+    if (!supabase || !currentUser) return { templates: [], error: 'Not authenticated' };
+    try {
+        const { data, error } = await supabase
+            .from('templates')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('updated_at', { ascending: false });
+        if (error) return { templates: [], error: error.message };
+        return { templates: data };
+    } catch (e) {
+        return { templates: [], error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-upload-template', async (event, template) => {
+    if (!supabase || !currentUser) return { error: 'Not authenticated' };
+    try {
+        const { error } = await supabase
+            .from('templates')
+            .upsert({
+                id: template.id,
+                user_id: currentUser.id,
+                name: template.name,
+                description: template.description || '',
+                structure: template.structure,
+                updated_at: new Date(template.updatedAt || Date.now()).toISOString()
+            }, { onConflict: 'id' });
+        if (error) return { error: error.message };
+        return { success: true };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-delete-template', async (event, templateId) => {
+    if (!supabase || !currentUser) return { error: 'Not authenticated' };
+    try {
+        const { error } = await supabase
+            .from('templates')
+            .delete()
+            .eq('id', templateId)
+            .eq('user_id', currentUser.id);
+        if (error) return { error: error.message };
+        return { success: true };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+function startSupabaseRealtime() {
+    if (!supabase || !currentUser) return;
+
+    realtimeSubscription = supabase
+        .channel('templates-changes')
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'templates',
+                filter: `user_id=eq.${currentUser.id}`
+            },
+            (payload) => {
+                mainWindow.webContents.send('supabase-template-change', payload);
+            }
+        )
+        .subscribe();
+}
+
+function stopSupabaseRealtime() {
+    if (realtimeSubscription) {
+        supabase.removeChannel(realtimeSubscription);
+        realtimeSubscription = null;
+    }
+}
+
 // ========== APP LIFECYCLE ==========
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     createWindow();
+
+    // Initialize Supabase
+    initSupabase();
 
     // Setup auto-updater
     setupAutoUpdater();
@@ -622,6 +780,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     stopWebSocketServer();
+    stopSupabaseRealtime();
     if (process.platform !== 'darwin') {
         app.quit();
     }
