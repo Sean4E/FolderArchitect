@@ -258,6 +258,10 @@ function createMenu() {
                 },
                 { type: 'separator' },
                 {
+                    label: `Version ${app.getVersion()}`,
+                    enabled: false
+                },
+                {
                     label: 'About Folder Architect',
                     click: () => showAbout()
                 }
@@ -290,11 +294,12 @@ async function importTemplate() {
 }
 
 function showAbout() {
+    const version = app.getVersion();
     dialog.showMessageBox(mainWindow, {
         type: 'info',
         title: 'About Folder Architect',
-        message: 'Folder Architect v1.0.0',
-        detail: 'A powerful folder structure builder.\n\nCreate any folder structure with infinite subfolders.\nSave templates, apply naming conventions, and create folders instantly.\n\nBuilt with love for professionals.'
+        message: `Folder Architect v${version}`,
+        detail: 'A powerful folder structure builder.\n\nCreate any folder structure with infinite subfolders.\nSave templates, apply naming conventions, and create folders instantly.\n\nBuilt with love for professionals.\n\nhttps://github.com/Sean4E/FolderArchitect'
     });
 }
 
