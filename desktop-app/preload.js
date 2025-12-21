@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Supabase cloud sync
     supabaseSignIn: (email, password) => ipcRenderer.invoke('supabase-signin', email, password),
     supabaseSignUp: (email, password) => ipcRenderer.invoke('supabase-signup', email, password),
+    supabaseSignInWithGoogle: () => ipcRenderer.invoke('supabase-signin-google'),
     supabaseSignOut: () => ipcRenderer.invoke('supabase-signout'),
     supabaseGetSession: () => ipcRenderer.invoke('supabase-get-session'),
     supabaseLoadTemplates: () => ipcRenderer.invoke('supabase-load-templates'),

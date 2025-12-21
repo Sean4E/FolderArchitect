@@ -16,7 +16,7 @@ let wsIdentifier = 'folder-architect-default';
 
 // ========== SUPABASE CONFIG ==========
 const SUPABASE_URL = 'https://gnlcckcehekjacewihvc.supabase.co';
-const SUPABASE_ANON_KEY = 'apisb_publishable_bOBiP86pSAw3r4zq3b25lQ_vLg1N1SW';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdubGNja2NlaGVramFjZXdpaHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDQ1MDUsImV4cCI6MjA4MTkyMDUwNX0.R7f1Qq3l7s2R_IlA_G7NErhWNi_ci2uXT42XO3K-CG8';
 
 let supabase = null;
 let currentUser = null;
@@ -645,6 +645,26 @@ ipcMain.handle('supabase-signup', async (event, email, password) => {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) return { error: error.message };
         return { user: data.user, message: 'Check your email to verify your account' };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
+ipcMain.handle('supabase-signin-google', async () => {
+    if (!supabase) return { error: 'Supabase not configured' };
+    try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: 'https://gnlcckcehekjacewihvc.supabase.co/auth/v1/callback'
+            }
+        });
+        if (error) return { error: error.message };
+        // Open the OAuth URL in external browser
+        if (data?.url) {
+            require('electron').shell.openExternal(data.url);
+        }
+        return { success: true };
     } catch (e) {
         return { error: e.message };
     }
