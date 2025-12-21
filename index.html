@@ -1882,15 +1882,17 @@
         function startEditing(id) {
             const row = document.querySelector(`[data-folder-id="${id}"] > .folder-row`);
             if (!row) return;
-            
+
             const nameSpan = row.querySelector('.folder-name');
             const folder = findFolderById(folderStructure, id);
-            
+            if (!nameSpan || !folder) return;
+
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'folder-name-input';
             input.value = folder.name;
-            
+            input.style.minWidth = '100px';
+
             input.onblur = () => finishEditing(id, input.value);
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') input.blur();
@@ -1898,8 +1900,10 @@
                     input.value = folder.name;
                     input.blur();
                 }
+                e.stopPropagation();
             };
-            
+            input.onclick = (e) => e.stopPropagation();
+
             nameSpan.replaceWith(input);
             input.focus();
             input.select();
@@ -2200,33 +2204,35 @@
                     if (data.projectName) {
                         document.getElementById('projectName').value = data.projectName;
                     }
+                    // Also sync templates if present
+                    if (data.templates) {
+                        mergeIncomingTemplates(data.templates);
+                    }
                     break;
                 case 'templates':
                 case 'templates-sync':
-                    // Sync templates from desktop
+                    // Sync templates from desktop using version control
                     if (data.templates) {
-                        const incomingCustom = data.templates.filter(t => t.id?.startsWith('custom_'));
-                        if (incomingCustom.length > 0) {
-                            // Merge incoming templates with local ones
-                            incomingCustom.forEach(incoming => {
-                                const exists = customTemplates.find(t => t.id === incoming.id);
-                                if (!exists) {
-                                    customTemplates.push(incoming);
-                                }
-                            });
-                            saveCustomTemplates();
-                            renderTemplates();
-                            showToast(`Synced ${incomingCustom.length} template(s) from desktop`);
-                        }
+                        mergeIncomingTemplates(data.templates);
                     }
                     break;
                 case 'template-added':
-                    // Single template added
-                    if (data.template && !customTemplates.find(t => t.id === data.template.id)) {
-                        customTemplates.push(data.template);
-                        saveCustomTemplates();
-                        renderTemplates();
-                        showToast(`Template synced: ${data.template.name}`);
+                    // Single template added - use version control
+                    if (data.template) {
+                        const existing = customTemplates.find(t => t.id === data.template.id);
+                        if (!existing) {
+                            // New template
+                            customTemplates.push(data.template);
+                            saveCustomTemplates();
+                            renderTemplates();
+                            showToast(`Template synced: ${data.template.name}`);
+                        } else if (data.template.updatedAt && (!existing.updatedAt || data.template.updatedAt > existing.updatedAt)) {
+                            // Incoming is newer - update it
+                            Object.assign(existing, data.template);
+                            saveCustomTemplates();
+                            renderTemplates();
+                            showToast(`Template updated: ${data.template.name}`);
+                        }
                     }
                     break;
                 case 'template-deleted':
@@ -2240,6 +2246,35 @@
                 case 'folders-created':
                     showToast(`Desktop created ${data.created} folders`, 'success');
                     break;
+            }
+        }
+
+        // Merge incoming templates with version control
+        function mergeIncomingTemplates(templates) {
+            const incomingCustom = templates.filter(t => t.id?.startsWith('custom_'));
+            let added = 0, updated = 0;
+
+            incomingCustom.forEach(incoming => {
+                const existing = customTemplates.find(t => t.id === incoming.id);
+                if (!existing) {
+                    customTemplates.push(incoming);
+                    added++;
+                } else if (incoming.updatedAt && (!existing.updatedAt || incoming.updatedAt > existing.updatedAt)) {
+                    Object.assign(existing, incoming);
+                    updated++;
+                }
+            });
+
+            if (added > 0 || updated > 0) {
+                saveCustomTemplates();
+                renderTemplates();
+                if (added > 0 && updated > 0) {
+                    showToast(`Synced ${added} new, updated ${updated} template(s)`);
+                } else if (added > 0) {
+                    showToast(`Synced ${added} template(s) from desktop`);
+                } else {
+                    showToast(`Updated ${updated} template(s) from desktop`);
+                }
             }
         }
 
@@ -2457,7 +2492,8 @@
                 id: 'custom_' + Date.now(),
                 name: name,
                 description: desc,
-                structure: stripIds(deepClone(folderStructure))
+                structure: stripIds(deepClone(folderStructure)),
+                updatedAt: Date.now()
             };
 
             customTemplates.push(template);

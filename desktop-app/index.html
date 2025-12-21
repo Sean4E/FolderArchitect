@@ -2462,11 +2462,13 @@
 
             const nameSpan = row.querySelector('.folder-name');
             const folder = findFolderById(folderStructure, id);
+            if (!nameSpan || !folder) return;
 
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'folder-name-input';
             input.value = folder.name;
+            input.style.minWidth = '100px';
 
             input.onblur = () => finishEditing(id, input.value);
             input.onkeydown = (e) => {
@@ -2475,7 +2477,9 @@
                     input.value = folder.name;
                     input.blur();
                 }
+                e.stopPropagation();
             };
+            input.onclick = (e) => e.stopPropagation();
 
             nameSpan.replaceWith(input);
             input.focus();
@@ -2862,7 +2866,8 @@
                 id: 'custom_' + Date.now(),
                 name: name,
                 description: desc,
-                structure: stripIds(deepClone(folderStructure))
+                structure: stripIds(deepClone(folderStructure)),
+                updatedAt: Date.now()
             };
 
             customTemplates.push(template);
@@ -3381,13 +3386,23 @@
                 });
             });
 
-            // Listen for template sync from web clients
+            // Listen for template sync from web clients - use version control
             window.electronAPI.onWSTemplateAdded((template) => {
-                if (template && !customTemplates.find(t => t.id === template.id)) {
-                    customTemplates.push(template);
-                    saveCustomTemplates();
-                    renderTemplates();
-                    showToast(`Template synced: ${template.name}`);
+                if (template) {
+                    const existing = customTemplates.find(t => t.id === template.id);
+                    if (!existing) {
+                        // New template
+                        customTemplates.push(template);
+                        saveCustomTemplates();
+                        renderTemplates();
+                        showToast(`Template synced: ${template.name}`);
+                    } else if (template.updatedAt && (!existing.updatedAt || template.updatedAt > existing.updatedAt)) {
+                        // Incoming is newer - update it
+                        Object.assign(existing, template);
+                        saveCustomTemplates();
+                        renderTemplates();
+                        showToast(`Template updated: ${template.name}`);
+                    }
                 }
             });
 
