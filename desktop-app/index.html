@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src https://*.supabase.co wss://*.supabase.co;">
     <title>Folder Architect | Structure Builder</title>
     <link rel="icon" type="image/png" href="assets/icon.png">
     <link rel="icon" type="image/x-icon" href="assets/icon.ico">
@@ -848,6 +848,202 @@
             }
         }
 
+        /* Cloud Sync / Auth UI */
+        .cloud-sync-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-dim);
+        }
+
+        .sync-status.connected {
+            color: var(--success);
+        }
+
+        .sync-status.syncing {
+            color: var(--accent);
+        }
+
+        .sync-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .sync-status.connected .sync-indicator {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .sync-status.syncing .sync-indicator {
+            background: var(--accent);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .user-email {
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        .auth-btn {
+            padding: 6px 12px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .auth-btn:hover {
+            background: #5558e3;
+        }
+
+        .auth-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        .auth-btn.secondary:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        /* Auth Modal */
+        .auth-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-modal.active {
+            display: flex;
+        }
+
+        .auth-modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .auth-modal h2 {
+            margin-bottom: 8px;
+            font-size: 20px;
+        }
+
+        .auth-modal p {
+            color: var(--text-dim);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-form input {
+            padding: 12px 16px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .auth-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .auth-form button {
+            padding: 12px;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .auth-form button:hover {
+            background: #5558e3;
+        }
+
+        .auth-form button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .auth-toggle a {
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+
+        .auth-error {
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            border-radius: var(--radius-sm);
+            color: var(--danger);
+            font-size: 13px;
+            display: none;
+            margin-bottom: 16px;
+        }
+
+        .auth-error.visible {
+            display: block;
+        }
+
         /* Empty State */
         .empty-state {
             display: flex;
@@ -1156,6 +1352,43 @@
             </div>
             <div class="update-actions" id="updateActions">
                 <button class="btn btn-secondary" onclick="closeUpdateModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cloud Sync Bar -->
+    <div class="cloud-sync-bar" id="cloudSyncBar">
+        <div class="sync-status" id="syncStatus">
+            <span class="sync-indicator"></span>
+            <span id="syncStatusText">Not signed in</span>
+        </div>
+        <div class="user-info" id="userInfo" style="display: none;">
+            <span class="user-email" id="userEmail"></span>
+            <button class="auth-btn secondary" onclick="signOut()">Sign Out</button>
+        </div>
+        <div id="authButtons">
+            <button class="auth-btn" onclick="showAuthModal('signin')">Sign In</button>
+            <button class="auth-btn secondary" onclick="showAuthModal('signup')">Sign Up</button>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-modal-content">
+            <h2 id="authModalTitle">Sign In</h2>
+            <p id="authModalDesc">Sign in to sync your templates across all devices</p>
+            <div class="auth-error" id="authError"></div>
+            <form class="auth-form" id="authForm" onsubmit="handleAuth(event)">
+                <input type="email" id="authEmail" placeholder="Email" required>
+                <input type="password" id="authPassword" placeholder="Password" required minlength="6">
+                <button type="submit" id="authSubmit">Sign In</button>
+            </form>
+            <div class="auth-toggle">
+                <span id="authToggleText">Don't have an account?</span>
+                <a onclick="toggleAuthMode()" id="authToggleLink">Sign Up</a>
+            </div>
+            <div style="text-align: center; margin-top: 16px;">
+                <a onclick="closeAuthModal()" style="color: var(--text-dim); cursor: pointer; font-size: 13px;">Cancel</a>
             </div>
         </div>
     </div>
@@ -1534,6 +1767,270 @@
     </div>
 
     <script>
+        // ===== SUPABASE (via IPC to main process) =====
+        let currentUser = null;
+        let authMode = 'signin';
+
+        // ===== AUTH FUNCTIONS =====
+        function showAuthModal(mode) {
+            authMode = mode;
+            const modal = document.getElementById('authModal');
+            const title = document.getElementById('authModalTitle');
+            const desc = document.getElementById('authModalDesc');
+            const submit = document.getElementById('authSubmit');
+            const toggleText = document.getElementById('authToggleText');
+            const toggleLink = document.getElementById('authToggleLink');
+
+            if (mode === 'signup') {
+                title.textContent = 'Create Account';
+                desc.textContent = 'Create an account to sync templates across devices';
+                submit.textContent = 'Create Account';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Sign In';
+            } else {
+                title.textContent = 'Sign In';
+                desc.textContent = 'Sign in to sync your templates across all devices';
+                submit.textContent = 'Sign In';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign Up';
+            }
+
+            document.getElementById('authError').classList.remove('visible');
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+            modal.classList.add('active');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.remove('active');
+        }
+
+        function toggleAuthMode() {
+            showAuthModal(authMode === 'signin' ? 'signup' : 'signin');
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            if (!isElectron) {
+                showAuthError('Cloud sync only available in desktop app');
+                return;
+            }
+
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const submitBtn = document.getElementById('authSubmit');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = authMode === 'signup' ? 'Creating...' : 'Signing in...';
+
+            try {
+                let result;
+                if (authMode === 'signup') {
+                    result = await window.electronAPI.supabaseSignUp(email, password);
+                } else {
+                    result = await window.electronAPI.supabaseSignIn(email, password);
+                }
+
+                if (result.error) {
+                    showAuthError(result.error);
+                } else {
+                    closeAuthModal();
+                    if (authMode === 'signup') {
+                        showToast('Account created! Check your email to verify.', 'success');
+                    }
+                }
+            } catch (err) {
+                showAuthError(err.message || 'Authentication failed');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = authMode === 'signup' ? 'Create Account' : 'Sign In';
+            }
+        }
+
+        function showAuthError(message) {
+            const errorEl = document.getElementById('authError');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+
+        async function signOut() {
+            if (!isElectron) return;
+            await window.electronAPI.supabaseSignOut();
+            currentUser = null;
+            updateAuthUI();
+            showToast('Signed out');
+        }
+
+        function updateAuthUI() {
+            const syncStatus = document.getElementById('syncStatus');
+            const syncStatusText = document.getElementById('syncStatusText');
+            const userInfo = document.getElementById('userInfo');
+            const authButtons = document.getElementById('authButtons');
+            const userEmail = document.getElementById('userEmail');
+
+            if (currentUser) {
+                syncStatus.className = 'sync-status connected';
+                syncStatusText.textContent = 'Cloud synced';
+                userInfo.style.display = 'flex';
+                authButtons.style.display = 'none';
+                userEmail.textContent = currentUser.email;
+            } else {
+                syncStatus.className = 'sync-status';
+                syncStatusText.textContent = 'Not signed in';
+                userInfo.style.display = 'none';
+                authButtons.style.display = 'flex';
+            }
+        }
+
+        // ===== CLOUD SYNC FUNCTIONS =====
+        async function loadCloudTemplates() {
+            if (!isElectron || !currentUser) return;
+
+            setSyncStatus('syncing', 'Syncing...');
+
+            try {
+                const result = await window.electronAPI.supabaseLoadTemplates();
+                if (result.error) throw new Error(result.error);
+
+                const data = result.data || [];
+                let syncCount = 0;
+
+                data.forEach(cloudTemplate => {
+                    const local = customTemplates.find(t => t.id === cloudTemplate.id);
+                    if (!local) {
+                        customTemplates.push({
+                            id: cloudTemplate.id,
+                            name: cloudTemplate.name,
+                            description: cloudTemplate.description,
+                            structure: cloudTemplate.structure,
+                            updatedAt: new Date(cloudTemplate.updated_at).getTime()
+                        });
+                        syncCount++;
+                    } else {
+                        const cloudTime = new Date(cloudTemplate.updated_at).getTime();
+                        if (!local.updatedAt || cloudTime > local.updatedAt) {
+                            Object.assign(local, {
+                                name: cloudTemplate.name,
+                                description: cloudTemplate.description,
+                                structure: cloudTemplate.structure,
+                                updatedAt: cloudTime
+                            });
+                            syncCount++;
+                        }
+                    }
+                });
+
+                // Upload local templates that don't exist in cloud
+                for (const local of customTemplates) {
+                    const inCloud = data.find(t => t.id === local.id);
+                    if (!inCloud) {
+                        await uploadTemplateToCloud(local);
+                    }
+                }
+
+                saveCustomTemplates();
+                renderTemplates();
+                setSyncStatus('connected', 'Cloud synced');
+
+                if (syncCount > 0) {
+                    showToast(`Synced ${syncCount} template(s) from cloud`);
+                }
+            } catch (err) {
+                console.error('Sync error:', err);
+                setSyncStatus('connected', 'Sync error');
+                showToast('Failed to sync templates', 'error');
+            }
+        }
+
+        async function uploadTemplateToCloud(template) {
+            if (!isElectron || !currentUser) return;
+
+            try {
+                await window.electronAPI.supabaseUploadTemplate(template);
+            } catch (err) {
+                console.error('Upload error:', err);
+            }
+        }
+
+        async function deleteTemplateFromCloud(templateId) {
+            if (!isElectron || !currentUser) return;
+
+            try {
+                await window.electronAPI.supabaseDeleteTemplate(templateId);
+            } catch (err) {
+                console.error('Delete error:', err);
+            }
+        }
+
+        function setSyncStatus(status, text) {
+            const syncStatus = document.getElementById('syncStatus');
+            const syncStatusText = document.getElementById('syncStatusText');
+            syncStatus.className = 'sync-status ' + status;
+            syncStatusText.textContent = text;
+        }
+
+        // Setup Supabase listeners
+        function setupSupabaseListeners() {
+            if (!isElectron) return;
+
+            // Auth state changes
+            window.electronAPI.onSupabaseAuthChange((data) => {
+                if (data.user) {
+                    currentUser = data.user;
+                    updateAuthUI();
+                    loadCloudTemplates();
+                } else {
+                    currentUser = null;
+                    updateAuthUI();
+                }
+            });
+
+            // Real-time template changes
+            window.electronAPI.onSupabaseTemplateChange((data) => {
+                const { eventType, record } = data;
+
+                if (eventType === 'INSERT' || eventType === 'UPDATE') {
+                    const template = {
+                        id: record.id,
+                        name: record.name,
+                        description: record.description,
+                        structure: record.structure,
+                        updatedAt: new Date(record.updated_at).getTime()
+                    };
+
+                    const existing = customTemplates.find(t => t.id === template.id);
+                    if (!existing) {
+                        customTemplates.push(template);
+                        showToast(`Template synced: ${template.name}`);
+                    } else if (template.updatedAt > (existing.updatedAt || 0)) {
+                        Object.assign(existing, template);
+                        showToast(`Template updated: ${template.name}`);
+                    }
+
+                    saveCustomTemplates();
+                    renderTemplates();
+                } else if (eventType === 'DELETE') {
+                    const idx = customTemplates.findIndex(t => t.id === record.id);
+                    if (idx !== -1) {
+                        const name = customTemplates[idx].name;
+                        customTemplates.splice(idx, 1);
+                        saveCustomTemplates();
+                        renderTemplates();
+                        showToast(`Template removed: ${name}`);
+                    }
+                }
+            });
+
+            // Check initial session
+            window.electronAPI.supabaseGetSession().then(result => {
+                if (result.user) {
+                    currentUser = result.user;
+                    updateAuthUI();
+                    loadCloudTemplates();
+                }
+            });
+        }
+
         // ===== DATA =====
         let folderStructure = [];
         let customTemplates = [];
@@ -2876,6 +3373,9 @@
             closeSaveModal();
             showToast('Template saved!');
 
+            // Upload to cloud
+            uploadTemplateToCloud(template);
+
             // Broadcast to connected WebSocket clients
             if (isElectron && window.electronAPI.broadcastTemplateAdded) {
                 window.electronAPI.broadcastTemplateAdded(template);
@@ -2888,6 +3388,9 @@
                 saveCustomTemplates();
                 renderTemplates();
                 showToast('Template deleted');
+
+                // Delete from cloud
+                deleteTemplateFromCloud(id);
 
                 // Broadcast to connected WebSocket clients
                 if (isElectron && window.electronAPI.broadcastTemplateDeleted) {
@@ -3563,6 +4066,7 @@
             updatePreview();
             setupElectronListeners();
             setupUpdateListeners();
+            setupSupabaseListeners();
             restorePanelState();
             setupPanelClickExpand();
         }
