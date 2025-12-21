@@ -540,8 +540,22 @@ function handleWebSocketMessage(data, ws) {
         case 'get-templates':
             mainWindow.webContents.send('ws-get-templates');
             break;
+        case 'get-state':
+            // Client requesting current state
+            mainWindow.webContents.send('get-current-state');
+            break;
         case 'sync-state':
             // Broadcast state to all other clients
+            broadcastToClients(data, ws);
+            break;
+        case 'template-added':
+            // Broadcast new template to all clients and notify renderer
+            mainWindow.webContents.send('ws-template-added', data.template);
+            broadcastToClients(data, ws);
+            break;
+        case 'template-deleted':
+            // Broadcast template deletion to all clients and notify renderer
+            mainWindow.webContents.send('ws-template-deleted', data.templateId);
             broadcastToClients(data, ws);
             break;
     }
@@ -568,6 +582,21 @@ ipcMain.on('send-templates', (event, templates) => {
     broadcastToClients({
         type: 'templates',
         templates
+    });
+});
+
+// Handle template sync from renderer (when user saves/deletes a template)
+ipcMain.on('broadcast-template-added', (event, template) => {
+    broadcastToClients({
+        type: 'template-added',
+        template
+    });
+});
+
+ipcMain.on('broadcast-template-deleted', (event, templateId) => {
+    broadcastToClients({
+        type: 'template-deleted',
+        templateId
     });
 });
 

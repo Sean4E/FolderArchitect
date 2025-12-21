@@ -2185,6 +2185,8 @@
             switch (data.type) {
                 case 'welcome':
                     console.log('Connected to:', data.identifier, 'on port', data.port);
+                    // Request current state from desktop
+                    sendWSMessage({ type: 'get-state' });
                     break;
                 case 'state-update':
                     // Sync structure from desktop
@@ -2200,12 +2202,53 @@
                     }
                     break;
                 case 'templates':
-                    // Could sync templates here
-                    console.log('Received templates:', data.templates?.length);
+                case 'templates-sync':
+                    // Sync templates from desktop
+                    if (data.templates) {
+                        const incomingCustom = data.templates.filter(t => t.id?.startsWith('custom_'));
+                        if (incomingCustom.length > 0) {
+                            // Merge incoming templates with local ones
+                            incomingCustom.forEach(incoming => {
+                                const exists = customTemplates.find(t => t.id === incoming.id);
+                                if (!exists) {
+                                    customTemplates.push(incoming);
+                                }
+                            });
+                            saveCustomTemplates();
+                            renderTemplates();
+                            showToast(`Synced ${incomingCustom.length} template(s) from desktop`);
+                        }
+                    }
+                    break;
+                case 'template-added':
+                    // Single template added
+                    if (data.template && !customTemplates.find(t => t.id === data.template.id)) {
+                        customTemplates.push(data.template);
+                        saveCustomTemplates();
+                        renderTemplates();
+                        showToast(`Template synced: ${data.template.name}`);
+                    }
+                    break;
+                case 'template-deleted':
+                    // Template deleted
+                    if (data.templateId) {
+                        customTemplates = customTemplates.filter(t => t.id !== data.templateId);
+                        saveCustomTemplates();
+                        renderTemplates();
+                    }
                     break;
                 case 'folders-created':
                     showToast(`Desktop created ${data.created} folders`, 'success');
                     break;
+            }
+        }
+
+        // Broadcast template changes to connected clients
+        function broadcastTemplateChange(type, template, templateId) {
+            if (type === 'added') {
+                sendWSMessage({ type: 'template-added', template: template });
+            } else if (type === 'deleted') {
+                sendWSMessage({ type: 'template-deleted', templateId: templateId });
             }
         }
 
@@ -2377,11 +2420,24 @@
             document.getElementById('templateName').value = document.getElementById('projectName').value;
             document.getElementById('templateDesc').value = '';
             document.getElementById('saveModal').classList.add('active');
+            // Focus the name input
+            setTimeout(() => document.getElementById('templateName').focus(), 100);
         }
 
         function closeSaveModal() {
             document.getElementById('saveModal').classList.remove('active');
         }
+
+        // Enter key support for save modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('saveModal').classList.contains('active')) {
+                e.preventDefault();
+                confirmSaveTemplate();
+            }
+            if (e.key === 'Escape' && document.getElementById('saveModal').classList.contains('active')) {
+                closeSaveModal();
+            }
+        });
 
         function confirmSaveTemplate() {
             const name = document.getElementById('templateName').value.trim();
@@ -2403,12 +2459,14 @@
                 description: desc,
                 structure: stripIds(deepClone(folderStructure))
             };
-            
+
             customTemplates.push(template);
             saveCustomTemplates();
             renderTemplates();
             closeSaveModal();
             showToast('Template saved!');
+            // Broadcast to connected clients
+            broadcastTemplateChange('added', template);
         }
 
         function deleteCustomTemplate(id) {
@@ -2417,6 +2475,8 @@
                 saveCustomTemplates();
                 renderTemplates();
                 showToast('Template deleted');
+                // Broadcast to connected clients
+                broadcastTemplateChange('deleted', null, id);
             }
         }
 
@@ -2756,6 +2816,19 @@
         document.getElementById('caseStyle').addEventListener('change', updatePreview);
         document.getElementById('autoNumber').addEventListener('change', updatePreview);
         document.getElementById('projectName').addEventListener('input', updatePreview);
+
+        // Enter key support for save template modal
+        document.addEventListener('keydown', (e) => {
+            const saveModal = document.getElementById('saveModal');
+            if (saveModal && saveModal.classList.contains('active')) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmSaveTemplate();
+                } else if (e.key === 'Escape') {
+                    closeSaveModal();
+                }
+            }
+        });
 
         // ===== INITIALIZATION =====
         function init() {

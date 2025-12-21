@@ -29,9 +29,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Get current state for WebSocket sync
     onGetCurrentState: (callback) => ipcRenderer.on('get-current-state', () => callback()),
 
+    // Template sync from WebSocket clients
+    onWSTemplateAdded: (callback) => ipcRenderer.on('ws-template-added', (event, template) => callback(template)),
+    onWSTemplateDeleted: (callback) => ipcRenderer.on('ws-template-deleted', (event, templateId) => callback(templateId)),
+
     // Broadcast state to WebSocket clients
     broadcastState: (state) => ipcRenderer.send('broadcast-state', state),
     sendTemplates: (templates) => ipcRenderer.send('send-templates', templates),
+
+    // Broadcast template changes to WebSocket clients
+    broadcastTemplateAdded: (template) => ipcRenderer.send('broadcast-template-added', template),
+    broadcastTemplateDeleted: (templateId) => ipcRenderer.send('broadcast-template-deleted', templateId),
 
     // WebSocket configuration
     setWSPort: (port) => ipcRenderer.invoke('set-ws-port', port),
