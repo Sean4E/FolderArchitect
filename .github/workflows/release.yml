@@ -27,34 +27,9 @@ jobs:
         working-directory: desktop-app
         run: npm ci
 
-      - name: Create self-signed certificate
-        shell: powershell
-        run: |
-          # Create a self-signed code signing certificate
-          $cert = New-SelfSignedCertificate `
-            -Type CodeSigningCert `
-            -Subject "CN=4E, O=4E, L=London, C=GB" `
-            -KeyAlgorithm RSA `
-            -KeyLength 2048 `
-            -HashAlgorithm SHA256 `
-            -CertStoreLocation Cert:\CurrentUser\My `
-            -NotAfter (Get-Date).AddYears(5)
-
-          # Export to PFX
-          $password = ConvertTo-SecureString -String "FolderArchitect2024" -Force -AsPlainText
-          $certPath = "desktop-app\certificate.pfx"
-          Export-PfxCertificate -Cert $cert -FilePath $certPath -Password $password
-
-          # Set environment variables for electron-builder
-          echo "CSC_LINK=${{ github.workspace }}\desktop-app\certificate.pfx" >> $env:GITHUB_ENV
-          echo "CSC_KEY_PASSWORD=FolderArchitect2024" >> $env:GITHUB_ENV
-
       - name: Build Windows app
         working-directory: desktop-app
         run: npx electron-builder --win --x64 --publish never
-        env:
-          CSC_LINK: ${{ github.workspace }}\desktop-app\certificate.pfx
-          CSC_KEY_PASSWORD: FolderArchitect2024
 
       - name: Get version from tag
         id: get_version
@@ -80,7 +55,5 @@ jobs:
 
             ### Auto-Update
             If you have a previous version installed, it will automatically detect this update.
-
-            *Note: This build is signed with a self-signed certificate. Windows may show a SmartScreen warning on first run.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

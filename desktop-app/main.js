@@ -16,6 +16,8 @@ let wsIdentifier = 'folder-architect-default';
 // ========== AUTO UPDATER ==========
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+// Skip signature verification (self-signed/unsigned builds)
+autoUpdater.forceDevUpdateConfig = true;
 
 let updateCheckInProgress = false;
 let isManualCheck = false;
