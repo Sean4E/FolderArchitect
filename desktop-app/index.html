@@ -2669,8 +2669,8 @@
                 const panel = document.getElementById(id);
                 if (panel) {
                     panel.addEventListener('click', (e) => {
-                        if (panel.classList.contains('collapsed')) {
-                            e.stopPropagation();
+                        // Only expand if collapsed AND click is directly on the panel (not children)
+                        if (panel.classList.contains('collapsed') && e.target === panel) {
                             togglePanel(id);
                         }
                     });
