@@ -1,6 +1,6 @@
 {
   "name": "folder-architect",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Powerful folder structure builder - Create any folder structure with infinite subfolders",
   "main": "main.js",
   "author": "4E",
@@ -57,7 +57,8 @@
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",
-      "shortcutName": "Folder Architect"
+      "shortcutName": "Folder Architect",
+      "artifactName": "FolderArchitect-Setup-${version}.exe"
     },
     "portable": {
       "artifactName": "FolderArchitect-Portable-${version}.exe",
