@@ -1621,7 +1621,7 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdubGNja2NlaGVramFjZXdpaHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDQ1MDUsImV4cCI6MjA4MTkyMDUwNX0.R7f1Qq3l7s2R_IlA_G7NErhWNi_ci2uXT42XO3K-CG8';
 
         // Initialize Supabase client
-        let supabase = null;
+        let supabaseClient = null;
         let currentUser = null;
         let realtimeSubscription = null;
         let authMode = 'signin';
@@ -1632,7 +1632,7 @@
                 return false;
             }
             try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 return true;
             } catch (e) {
                 console.error('Failed to initialize Supabase:', e);
@@ -1680,7 +1680,7 @@
 
         async function handleAuth(e) {
             e.preventDefault();
-            if (!supabase) {
+            if (!supabaseClient) {
                 showAuthError('Supabase not configured. Please add your credentials.');
                 return;
             }
@@ -1695,9 +1695,9 @@
             try {
                 let result;
                 if (authMode === 'signup') {
-                    result = await supabase.auth.signUp({ email, password });
+                    result = await supabaseClient.auth.signUp({ email, password });
                 } else {
-                    result = await supabase.auth.signInWithPassword({ email, password });
+                    result = await supabaseClient.auth.signInWithPassword({ email, password });
                 }
 
                 if (result.error) {
@@ -1723,8 +1723,8 @@
         }
 
         async function signOut() {
-            if (!supabase) return;
-            await supabase.auth.signOut();
+            if (!supabaseClient) return;
+            await supabaseClient.auth.signOut();
             currentUser = null;
             updateAuthUI();
             stopRealtimeSync();
@@ -1732,12 +1732,12 @@
         }
 
         async function signInWithGoogle() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showAuthError('Supabase not configured');
                 return;
             }
             try {
-                const { error } = await supabase.auth.signInWithOAuth({
+                const { error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
                         redirectTo: window.location.origin + window.location.pathname
@@ -1774,12 +1774,12 @@
 
         // ===== CLOUD SYNC FUNCTIONS =====
         async function loadCloudTemplates() {
-            if (!supabase || !currentUser) return;
+            if (!supabaseClient || !currentUser) return;
 
             setSyncStatus('syncing', 'Syncing...');
 
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('templates')
                     .select('*')
                     .eq('user_id', currentUser.id)
@@ -1839,10 +1839,10 @@
         }
 
         async function uploadTemplateToCloud(template) {
-            if (!supabase || !currentUser) return;
+            if (!supabaseClient || !currentUser) return;
 
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('templates')
                     .upsert({
                         id: template.id,
@@ -1860,10 +1860,10 @@
         }
 
         async function deleteTemplateFromCloud(templateId) {
-            if (!supabase || !currentUser) return;
+            if (!supabaseClient || !currentUser) return;
 
             try {
-                await supabase
+                await supabaseClient
                     .from('templates')
                     .delete()
                     .eq('id', templateId)
@@ -1882,9 +1882,9 @@
 
         // ===== REAL-TIME SYNC =====
         function startRealtimeSync() {
-            if (!supabase || !currentUser) return;
+            if (!supabaseClient || !currentUser) return;
 
-            realtimeSubscription = supabase
+            realtimeSubscription = supabaseClient
                 .channel('templates-changes')
                 .on(
                     'postgres_changes',
@@ -1901,7 +1901,7 @@
 
         function stopRealtimeSync() {
             if (realtimeSubscription) {
-                supabase.removeChannel(realtimeSubscription);
+                supabaseClient.removeChannel(realtimeSubscription);
                 realtimeSubscription = null;
             }
         }
@@ -3507,7 +3507,7 @@
             try {
                 if (initSupabase()) {
                     // Set up auth state listener
-                    supabase.auth.onAuthStateChange(async (event, session) => {
+                    supabaseClient.auth.onAuthStateChange(async (event, session) => {
                         try {
                             if (session?.user) {
                                 currentUser = session.user;
@@ -3526,7 +3526,7 @@
 
                     // Check for existing session
                     try {
-                        const { data: { session } } = await supabase.auth.getSession();
+                        const { data: { session } } = await supabaseClient.auth.getSession();
                         if (session?.user) {
                             currentUser = session.user;
                             updateAuthUI();
