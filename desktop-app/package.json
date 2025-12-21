@@ -1,6 +1,6 @@
 {
   "name": "folder-architect",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Powerful folder structure builder - Create any folder structure with infinite subfolders",
   "main": "main.js",
   "author": "4E",
@@ -47,7 +47,8 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "publisherName": "4E"
+      "publisherName": "4E",
+      "signingHashAlgorithms": ["sha256"]
     },
     "nsis": {
       "oneClick": false,
