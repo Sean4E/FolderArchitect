@@ -29,9 +29,7 @@ jobs:
 
       - name: Build Windows app
         working-directory: desktop-app
-        run: npm run build:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --x64 --publish never
 
       - name: Get version from tag
         id: get_version
