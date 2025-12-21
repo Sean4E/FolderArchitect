@@ -15,9 +15,8 @@ let wsPort = 9876;
 let wsIdentifier = 'folder-architect-default';
 
 // ========== SUPABASE CONFIG ==========
-// Replace with your Supabase credentials
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://gnlcckcehekjacewihvc.supabase.co';
+const SUPABASE_ANON_KEY = 'apisb_publishable_bOBiP86pSAw3r4zq3b25lQ_vLg1N1SW';
 
 let supabase = null;
 let currentUser = null;
