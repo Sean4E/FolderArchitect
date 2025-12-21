@@ -656,7 +656,7 @@ ipcMain.handle('supabase-signin-google', async () => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: 'https://gnlcckcehekjacewihvc.supabase.co/auth/v1/callback'
+                redirectTo: 'https://sean4e.github.io/FolderArchitect/'
             }
         });
         if (error) return { error: error.message };
@@ -664,7 +664,7 @@ ipcMain.handle('supabase-signin-google', async () => {
         if (data?.url) {
             require('electron').shell.openExternal(data.url);
         }
-        return { success: true };
+        return { success: true, message: 'Complete sign-in in your browser, then return to this app' };
     } catch (e) {
         return { error: e.message };
     }

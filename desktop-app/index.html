@@ -1920,20 +1920,11 @@
         }
 
         async function signInWithGoogle() {
-            if (!isElectron) {
-                showAuthError('Google sign-in only available in desktop app');
-                return;
-            }
-            try {
-                const result = await window.electronAPI.supabaseSignInWithGoogle();
-                if (result.error) {
-                    showAuthError(result.error);
-                } else {
-                    closeAuthModal();
-                }
-            } catch (err) {
-                showAuthError(err.message || 'Google sign-in failed');
-            }
+            if (!isElectron) return;
+            // Use the IPC handler which opens the browser
+            await window.electronAPI.supabaseSignInWithGoogle();
+            closeAuthModal();
+            showToast('Complete Google sign-in in your browser. Your templates will sync automatically.');
         }
 
         function updateAuthUI() {
