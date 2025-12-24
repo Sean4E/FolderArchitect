@@ -1797,11 +1797,20 @@
             try {
                 console.log('Fetching templates from cloud for user:', currentUser.id);
                 const startTime = Date.now();
-                const { data, error } = await supabaseClient
+
+                // Add timeout wrapper
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
+                );
+
+                const queryPromise = supabaseClient
                     .from('templates')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('updated_at', { ascending: false });
+
+                console.log('Query promise created, waiting for response...');
+                const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
 
                 console.log('Query completed in', Date.now() - startTime, 'ms');
                 console.log('Cloud templates fetched:', data?.length || 0, 'templates');
