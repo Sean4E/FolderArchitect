@@ -1785,40 +1785,23 @@
         }
 
         // ===== CLOUD SYNC FUNCTIONS =====
-        async function loadCloudTemplates() {
-            console.log('loadCloudTemplates called');
-            if (!supabaseClient || !currentUser) {
-                console.log('loadCloudTemplates: no client or user');
-                return;
-            }
+        let cloudSyncInProgress = false;
 
+        async function loadCloudTemplates() {
+            if (!supabaseClient || !currentUser) return;
+            if (cloudSyncInProgress) return; // Prevent duplicate calls
+
+            cloudSyncInProgress = true;
             setSyncStatus('syncing', 'Syncing...');
 
             try {
-                console.log('Fetching templates from cloud for user:', currentUser.id);
-                const startTime = Date.now();
-
-                // Add timeout wrapper
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
-                );
-
-                const queryPromise = supabaseClient
+                const { data, error } = await supabaseClient
                     .from('templates')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('updated_at', { ascending: false });
 
-                console.log('Query promise created, waiting for response...');
-                const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-                console.log('Query completed in', Date.now() - startTime, 'ms');
-                console.log('Cloud templates fetched:', data?.length || 0, 'templates');
-                if (error) {
-                    console.error('Supabase query error:', error);
-                    throw error;
-                }
-                console.log('Templates:', JSON.stringify(data));
+                if (error) throw error;
 
                 // Merge cloud templates with local
                 let syncCount = 0;
@@ -1851,7 +1834,6 @@
 
                 // Upload local templates that don't exist in cloud (don't block on this)
                 const uploadsNeeded = customTemplates.filter(local => !data.find(t => t.id === local.id));
-                console.log('Local templates to upload:', uploadsNeeded.length);
                 uploadsNeeded.forEach(local => {
                     uploadTemplateToCloud(local).catch(e => console.error('Upload error:', e));
                 });
@@ -1859,7 +1841,6 @@
                 saveCustomTemplates();
                 renderTemplates();
                 setSyncStatus('connected', 'Cloud synced');
-                console.log('loadCloudTemplates complete');
 
                 if (syncCount > 0) {
                     showToast(`Synced ${syncCount} template(s) from cloud`);
@@ -1867,7 +1848,8 @@
             } catch (err) {
                 console.error('Sync error:', err);
                 setSyncStatus('connected', 'Sync error');
-                showToast('Failed to sync templates', 'error');
+            } finally {
+                cloudSyncInProgress = false;
             }
         }
 
@@ -1920,8 +1902,6 @@
             // Stop existing subscription first
             stopRealtimeSync();
 
-            console.log('Starting realtime sync for user:', currentUser.id);
-
             realtimeSubscription = supabaseClient
                 .channel('templates-changes-' + Date.now())
                 .on(
@@ -1932,17 +1912,9 @@
                         table: 'templates',
                         filter: `user_id=eq.${currentUser.id}`
                     },
-                    (payload) => {
-                        console.log('Realtime event received:', payload);
-                        handleRealtimeChange(payload);
-                    }
+                    (payload) => handleRealtimeChange(payload)
                 )
-                .subscribe((status) => {
-                    console.log('Realtime subscription status:', status);
-                    if (status === 'SUBSCRIBED') {
-                        console.log('Successfully subscribed to realtime changes');
-                    }
-                });
+                .subscribe();
         }
 
         function stopRealtimeSync() {
@@ -1954,7 +1926,6 @@
 
         function handleRealtimeChange(payload) {
             const { eventType, new: newRecord, old: oldRecord } = payload;
-            console.log('Handling realtime change:', eventType, newRecord || oldRecord);
 
             if (eventType === 'INSERT' || eventType === 'UPDATE') {
                 const template = {
@@ -3738,13 +3709,10 @@
             setupPanelClickExpand();
 
             // Initialize Supabase (optional - app works without it)
-            console.log('Initializing Supabase...');
             try {
                 if (initSupabase()) {
-                    console.log('Supabase client created successfully');
                     // Set up auth state listener
                     supabaseClient.auth.onAuthStateChange(async (event, session) => {
-                        console.log('Auth state change:', event, session?.user?.email);
                         try {
                             // Clean up URL hash after OAuth callback
                             if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -3755,7 +3723,6 @@
                                 currentUser = session.user;
                                 updateAuthUI();
                                 await loadCloudTemplates();
-                                console.log('About to start realtime sync...');
                                 startRealtimeSync();
 
                                 // Check if this is a desktop OAuth callback - auto-connect and send auth
@@ -3777,22 +3744,17 @@
                     });
 
                     // Check for existing session
-                    console.log('Checking for existing session...');
                     try {
                         const { data: { session } } = await supabaseClient.auth.getSession();
-                        console.log('Session check result:', session?.user?.email || 'no session');
                         if (session?.user) {
                             currentUser = session.user;
                             updateAuthUI();
                             await loadCloudTemplates();
-                            console.log('About to start realtime sync (from session check)...');
                             startRealtimeSync();
                         }
                     } catch (e) {
                         console.error('Session check error:', e);
                     }
-                } else {
-                    console.log('Supabase not configured');
                 }
             } catch (e) {
                 console.error('Supabase init error:', e);
