@@ -10,6 +10,13 @@ let tray = null;
 let wsServer = null;
 let wsClients = new Set();
 
+// Safe send to renderer (handles null mainWindow)
+function sendToRenderer(channel, data) {
+    if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(channel, data);
+    }
+}
+
 // WebSocket server settings (configurable)
 let wsPort = 9876;
 let wsIdentifier = 'folder-architect-default';
@@ -546,7 +553,7 @@ function stopWebSocketServer() {
 
         wsServer.close(() => {
             wsServer = null;
-            mainWindow.webContents.send('ws-status', { status: 'stopped' });
+            sendToRenderer('ws-status', { status: 'stopped' });
             console.log('WebSocket server stopped');
         });
     }
@@ -555,17 +562,17 @@ function stopWebSocketServer() {
 function handleWebSocketMessage(data, ws) {
     switch (data.type) {
         case 'load-template':
-            mainWindow.webContents.send('ws-load-template', data.template);
+            sendToRenderer('ws-load-template', data.template);
             break;
         case 'create-folders':
-            mainWindow.webContents.send('ws-create-folders', data);
+            sendToRenderer('ws-create-folders', data);
             break;
         case 'get-templates':
-            mainWindow.webContents.send('ws-get-templates');
+            sendToRenderer('ws-get-templates');
             break;
         case 'get-state':
             // Client requesting current state
-            mainWindow.webContents.send('get-current-state');
+            sendToRenderer('get-current-state');
             break;
         case 'sync-state':
             // Broadcast state to all other clients
@@ -573,12 +580,12 @@ function handleWebSocketMessage(data, ws) {
             break;
         case 'template-added':
             // Broadcast new template to all clients and notify renderer
-            mainWindow.webContents.send('ws-template-added', data.template);
+            sendToRenderer('ws-template-added', data.template);
             broadcastToClients(data, ws);
             break;
         case 'template-deleted':
             // Broadcast template deletion to all clients and notify renderer
-            mainWindow.webContents.send('ws-template-deleted', data.templateId);
+            sendToRenderer('ws-template-deleted', data.templateId);
             broadcastToClients(data, ws);
             break;
         case 'auth-session':
@@ -606,7 +613,7 @@ async function handleAuthSessionFromWeb(session) {
 
         if (data.user) {
             currentUser = data.user;
-            mainWindow.webContents.send('supabase-auth-change', { user: currentUser });
+            sendToRenderer('supabase-auth-change', { user: currentUser });
             startSupabaseRealtime();
             console.log('Auth session received from web, user:', currentUser.email);
         }
@@ -662,7 +669,7 @@ ipcMain.handle('supabase-signin', async (event, email, password) => {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) return { error: error.message };
         currentUser = data.user;
-        mainWindow.webContents.send('supabase-auth-change', { user: currentUser });
+        sendToRenderer('supabase-auth-change', { user: currentUser });
         startSupabaseRealtime();
         return { user: currentUser };
     } catch (e) {
@@ -707,7 +714,7 @@ ipcMain.handle('supabase-signout', async () => {
         await supabase.auth.signOut();
         currentUser = null;
         stopSupabaseRealtime();
-        mainWindow.webContents.send('supabase-auth-change', { user: null });
+        sendToRenderer('supabase-auth-change', { user: null });
         return { success: true };
     } catch (e) {
         return { error: e.message };
@@ -792,7 +799,7 @@ function startSupabaseRealtime() {
                 filter: `user_id=eq.${currentUser.id}`
             },
             (payload) => {
-                mainWindow.webContents.send('supabase-template-change', payload);
+                sendToRenderer('supabase-template-change', payload);
             }
         )
         .subscribe();
