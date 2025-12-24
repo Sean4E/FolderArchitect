@@ -778,13 +778,33 @@ ipcMain.handle('supabase-upload-template', async (event, template) => {
     }
 });
 
+ipcMain.handle('supabase-update-template', async (event, template) => {
+    if (!supabase || !currentUser) return { error: 'Not authenticated' };
+    try {
+        const { error } = await supabase
+            .from('templates')
+            .update({
+                name: template.name,
+                description: template.description || '',
+                structure: template.structure,
+                updated_at: new Date(template.updatedAt || Date.now()).toISOString()
+            })
+            .eq('local_id', template.id)
+            .eq('user_id', currentUser.id);
+        if (error) return { error: error.message };
+        return { success: true };
+    } catch (e) {
+        return { error: e.message };
+    }
+});
+
 ipcMain.handle('supabase-delete-template', async (event, templateId) => {
     if (!supabase || !currentUser) return { error: 'Not authenticated' };
     try {
         const { error } = await supabase
             .from('templates')
             .delete()
-            .eq('id', templateId)
+            .eq('local_id', templateId)
             .eq('user_id', currentUser.id);
         if (error) return { error: error.message };
         return { success: true };

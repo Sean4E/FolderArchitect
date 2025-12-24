@@ -63,6 +63,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     supabaseGetSession: () => ipcRenderer.invoke('supabase-get-session'),
     supabaseLoadTemplates: () => ipcRenderer.invoke('supabase-load-templates'),
     supabaseUploadTemplate: (template) => ipcRenderer.invoke('supabase-upload-template', template),
+    supabaseUpdateTemplate: (template) => ipcRenderer.invoke('supabase-update-template', template),
     supabaseDeleteTemplate: (templateId) => ipcRenderer.invoke('supabase-delete-template', templateId),
     onSupabaseAuthChange: (callback) => ipcRenderer.on('supabase-auth-change', (event, data) => callback(data)),
     onSupabaseTemplateChange: (callback) => ipcRenderer.on('supabase-template-change', (event, data) => callback(data)),

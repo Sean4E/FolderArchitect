@@ -1540,13 +1540,20 @@
 
             <div class="builder-header">
                 <input type="text" class="project-name-input" id="projectName" placeholder="Project Name" value="My Project">
-                <button class="btn btn-primary" onclick="saveAsTemplate()">
+                <button class="btn btn-success" id="updateTemplateBtn" onclick="updateCurrentTemplate()" style="display: none;" title="Update loaded template">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                    Update
+                </button>
+                <button class="btn btn-primary" id="saveTemplateBtn" onclick="saveAsTemplate()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                         <polyline points="17 21 17 13 7 13 7 21"/>
                         <polyline points="7 3 7 8 15 8"/>
                     </svg>
-                    Save Template
+                    Save New
                 </button>
             </div>
 
@@ -2102,6 +2109,7 @@
         let customTemplates = [];
         let selectedFolderId = null;
         let draggedItem = null;
+        let currentLoadedTemplate = null; // Track which template is currently loaded for updates
 
         // Check if running in Electron
         const isElectron = window.electronAPI !== undefined;
@@ -3178,8 +3186,10 @@
             if (confirm('Clear all folders? This cannot be undone.')) {
                 folderStructure = [];
                 selectedFolderId = null;
+                currentLoadedTemplate = null;
                 renderTree();
                 updateStats();
+                updateSaveButtonState();
                 showToast('Structure cleared');
             }
         }
@@ -3192,10 +3202,12 @@
             }
             folderStructure = [];
             selectedFolderId = null;
+            currentLoadedTemplate = null;
             document.getElementById('projectName').value = 'New Project';
             renderTree();
             updateStats();
             updatePreview();
+            updateSaveButtonState();
             showToast('New structure ready', 'success');
         }
 
@@ -3395,9 +3407,25 @@
             if (template) {
                 folderStructure = addIdsToStructure(deepClone(template.structure));
                 document.getElementById('projectName').value = template.name;
+                // Track loaded template for update functionality (only custom templates can be updated)
+                currentLoadedTemplate = isCustom ? { id: template.id, name: template.name } : null;
                 renderTree();
                 updateStats();
+                updateSaveButtonState();
                 showToast(`Loaded: ${template.name}`);
+            }
+        }
+
+        function updateSaveButtonState() {
+            const saveBtn = document.getElementById('saveTemplateBtn');
+            const updateBtn = document.getElementById('updateTemplateBtn');
+            if (saveBtn && updateBtn) {
+                if (currentLoadedTemplate) {
+                    updateBtn.style.display = 'inline-flex';
+                    updateBtn.title = `Update "${currentLoadedTemplate.name}"`;
+                } else {
+                    updateBtn.style.display = 'none';
+                }
             }
         }
 
@@ -3439,6 +3467,10 @@
             closeSaveModal();
             showToast('Template saved!');
 
+            // Set as current loaded template so user can update it
+            currentLoadedTemplate = { id: template.id, name: template.name };
+            updateSaveButtonState();
+
             // Upload to cloud
             uploadTemplateToCloud(template);
 
@@ -3448,12 +3480,66 @@
             }
         }
 
+        function updateCurrentTemplate() {
+            if (!currentLoadedTemplate) {
+                showToast('No template loaded to update', 'error');
+                return;
+            }
+
+            const templateIndex = customTemplates.findIndex(t => t.id === currentLoadedTemplate.id);
+            if (templateIndex === -1) {
+                showToast('Template not found - it may have been deleted', 'error');
+                currentLoadedTemplate = null;
+                updateSaveButtonState();
+                return;
+            }
+
+            // Update the template
+            const updatedTemplate = {
+                ...customTemplates[templateIndex],
+                name: document.getElementById('projectName').value || currentLoadedTemplate.name,
+                structure: stripIds(deepClone(folderStructure)),
+                updatedAt: Date.now()
+            };
+
+            customTemplates[templateIndex] = updatedTemplate;
+            currentLoadedTemplate.name = updatedTemplate.name;
+            saveCustomTemplates();
+            renderTemplates();
+            updateSaveButtonState();
+            showToast(`Updated: ${updatedTemplate.name}`);
+
+            // Update in cloud
+            updateTemplateInCloud(updatedTemplate);
+
+            // Broadcast to connected WebSocket clients
+            if (isElectron && window.electronAPI.broadcastTemplateUpdated) {
+                window.electronAPI.broadcastTemplateUpdated(updatedTemplate);
+            }
+        }
+
+        async function updateTemplateInCloud(template) {
+            if (!isElectron || !currentUser) return;
+
+            try {
+                await window.electronAPI.supabaseUpdateTemplate(template);
+            } catch (e) {
+                console.error('Cloud update error:', e);
+            }
+        }
+
         function deleteCustomTemplate(id) {
             if (confirm('Delete this template?')) {
                 customTemplates = customTemplates.filter(t => t.id !== id);
                 saveCustomTemplates();
                 renderTemplates();
                 showToast('Template deleted');
+
+                // Clear current loaded template if it was deleted
+                if (currentLoadedTemplate && currentLoadedTemplate.id === id) {
+                    currentLoadedTemplate = null;
+                    updateSaveButtonState();
+                }
 
                 // Delete from cloud
                 deleteTemplateFromCloud(id);
