@@ -691,10 +691,18 @@ ipcMain.handle('supabase-signup', async (event, email, password) => {
 ipcMain.handle('supabase-signin-google', async () => {
     if (!supabase) return { error: 'Supabase not configured' };
     try {
+        // Auto-start WebSocket server if not running
+        if (!wsServer) {
+            startWebSocketServer(wsPort, wsIdentifier);
+        }
+
+        // Add desktop flag to redirect URL so web knows to send auth back
+        const redirectUrl = `https://sean4e.github.io/FolderArchitect/?desktop_auth=true&ws_port=${wsPort}`;
+
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: 'https://sean4e.github.io/FolderArchitect/'
+                redirectTo: redirectUrl
             }
         });
         if (error) return { error: error.message };
@@ -702,7 +710,7 @@ ipcMain.handle('supabase-signin-google', async () => {
         if (data?.url) {
             require('electron').shell.openExternal(data.url);
         }
-        return { success: true, message: 'Complete sign-in in your browser, then return to this app' };
+        return { success: true, message: 'Complete sign-in in your browser - you will be signed in automatically' };
     } catch (e) {
         return { error: e.message };
     }

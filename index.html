@@ -2734,6 +2734,86 @@
         // ===== WEBSOCKET SYNC (Web Client) =====
         let wsConnection = null;
         let wsReconnectTimer = null;
+        let pendingDesktopAuth = null; // Session to send to desktop after WS connects
+
+        // Check if this is a desktop OAuth callback
+        function checkDesktopAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isDesktopAuth = urlParams.get('desktop_auth') === 'true';
+            const wsPort = urlParams.get('ws_port') || '9876';
+
+            if (isDesktopAuth) {
+                // Store port for auto-connect after auth completes
+                localStorage.setItem('folderArchitect_desktopAuthPort', wsPort);
+                // Clean up URL params but keep hash (contains OAuth tokens)
+                const newUrl = window.location.pathname + window.location.hash;
+                history.replaceState(null, '', newUrl);
+                return true;
+            }
+            return false;
+        }
+
+        // Auto-connect to desktop and send auth session
+        function autoConnectAndSendAuth(session) {
+            const port = localStorage.getItem('folderArchitect_desktopAuthPort');
+            if (!port) return;
+
+            // Clear the stored port
+            localStorage.removeItem('folderArchitect_desktopAuthPort');
+
+            // Store session to send after connection
+            pendingDesktopAuth = session;
+
+            // Set the port in UI and connect
+            document.getElementById('wsPort').value = port;
+            document.getElementById('wsHost').value = 'localhost';
+
+            // Connect with callback to send auth
+            connectWSForDesktopAuth();
+        }
+
+        function connectWSForDesktopAuth() {
+            const host = document.getElementById('wsHost').value || 'localhost';
+            const port = document.getElementById('wsPort').value || '9876';
+            const wsUrl = `ws://${host}:${port}`;
+
+            try {
+                wsConnection = new WebSocket(wsUrl);
+
+                wsConnection.onopen = () => {
+                    updateWSStatus(true);
+                    // Send pending auth session
+                    if (pendingDesktopAuth) {
+                        sendAuthSessionToDesktop(pendingDesktopAuth);
+                        showToast('Signed in! You can now close this tab and return to the desktop app.', 'success');
+                        pendingDesktopAuth = null;
+                    }
+                };
+
+                wsConnection.onclose = () => {
+                    updateWSStatus(false);
+                    wsConnection = null;
+                };
+
+                wsConnection.onerror = (error) => {
+                    console.error('Desktop auth WS connection failed:', error);
+                    pendingDesktopAuth = null;
+                    updateWSStatus(false);
+                };
+
+                wsConnection.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWSMessage(data);
+                    } catch (e) {
+                        console.error('WS message parse error:', e);
+                    }
+                };
+            } catch (e) {
+                console.error('Failed to connect for desktop auth:', e);
+                pendingDesktopAuth = null;
+            }
+        }
 
         function toggleWSConnection() {
             if (wsConnection && wsConnection.readyState === WebSocket.OPEN) {
@@ -3510,6 +3590,9 @@
 
         // ===== INITIALIZATION =====
         async function init() {
+            // Check for desktop OAuth callback early (before URL gets cleaned up)
+            const isDesktopAuth = checkDesktopAuthCallback();
+
             // Load and display templates first (works offline)
             loadCustomTemplates();
             renderTemplates();
@@ -3536,8 +3619,15 @@
                                 updateAuthUI();
                                 await loadCloudTemplates();
                                 startRealtimeSync();
-                                // Send auth session to connected desktop via WebSocket
-                                sendAuthSessionToDesktop(session);
+
+                                // Check if this is a desktop OAuth callback - auto-connect and send auth
+                                const desktopAuthPort = localStorage.getItem('folderArchitect_desktopAuthPort');
+                                if (desktopAuthPort) {
+                                    autoConnectAndSendAuth(session);
+                                } else {
+                                    // Send auth session to already connected desktop via WebSocket
+                                    sendAuthSessionToDesktop(session);
+                                }
                             } else {
                                 currentUser = null;
                                 updateAuthUI();
