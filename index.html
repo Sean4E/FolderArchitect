@@ -3717,10 +3717,13 @@
             setupPanelClickExpand();
 
             // Initialize Supabase (optional - app works without it)
+            console.log('Initializing Supabase...');
             try {
                 if (initSupabase()) {
+                    console.log('Supabase client created successfully');
                     // Set up auth state listener
                     supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                        console.log('Auth state change:', event, session?.user?.email);
                         try {
                             // Clean up URL hash after OAuth callback
                             if (window.location.hash && window.location.hash.includes('access_token')) {
@@ -3731,6 +3734,7 @@
                                 currentUser = session.user;
                                 updateAuthUI();
                                 await loadCloudTemplates();
+                                console.log('About to start realtime sync...');
                                 startRealtimeSync();
 
                                 // Check if this is a desktop OAuth callback - auto-connect and send auth
@@ -3752,17 +3756,22 @@
                     });
 
                     // Check for existing session
+                    console.log('Checking for existing session...');
                     try {
                         const { data: { session } } = await supabaseClient.auth.getSession();
+                        console.log('Session check result:', session?.user?.email || 'no session');
                         if (session?.user) {
                             currentUser = session.user;
                             updateAuthUI();
                             await loadCloudTemplates();
+                            console.log('About to start realtime sync (from session check)...');
                             startRealtimeSync();
                         }
                     } catch (e) {
                         console.error('Session check error:', e);
                     }
+                } else {
+                    console.log('Supabase not configured');
                 }
             } catch (e) {
                 console.error('Supabase init error:', e);
