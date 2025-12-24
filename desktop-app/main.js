@@ -581,6 +581,37 @@ function handleWebSocketMessage(data, ws) {
             mainWindow.webContents.send('ws-template-deleted', data.templateId);
             broadcastToClients(data, ws);
             break;
+        case 'auth-session':
+            // Receive auth session from web client (Google sign-in)
+            handleAuthSessionFromWeb(data.session);
+            break;
+    }
+}
+
+// Handle auth session received from web client via WebSocket
+async function handleAuthSessionFromWeb(session) {
+    if (!supabase || !session) return;
+
+    try {
+        // Set the session in Supabase client
+        const { data, error } = await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+        });
+
+        if (error) {
+            console.error('Failed to set auth session:', error);
+            return;
+        }
+
+        if (data.user) {
+            currentUser = data.user;
+            mainWindow.webContents.send('supabase-auth-change', { user: currentUser });
+            startSupabaseRealtime();
+            console.log('Auth session received from web, user:', currentUser.email);
+        }
+    } catch (e) {
+        console.error('Error setting auth session:', e);
     }
 }
 

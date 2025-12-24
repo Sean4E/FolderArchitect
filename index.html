@@ -2910,6 +2910,18 @@
             }
         }
 
+        // Send auth session to desktop via WebSocket (for Google Sign-In)
+        function sendAuthSessionToDesktop(session) {
+            if (!session) return;
+            sendWSMessage({
+                type: 'auth-session',
+                session: {
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token
+                }
+            });
+        }
+
         // Sync current state to desktop
         function syncToDesktop() {
             sendWSMessage({
@@ -3514,6 +3526,8 @@
                                 updateAuthUI();
                                 await loadCloudTemplates();
                                 startRealtimeSync();
+                                // Send auth session to connected desktop via WebSocket
+                                sendAuthSessionToDesktop(session);
                             } else {
                                 currentUser = null;
                                 updateAuthUI();
