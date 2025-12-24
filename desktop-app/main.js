@@ -35,7 +35,14 @@ function initSupabase() {
         return false;
     }
     try {
-        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            realtime: {
+                params: {
+                    eventsPerSecond: 10
+                }
+            }
+        });
+        console.log('Supabase client initialized');
         return true;
     } catch (e) {
         console.error('Failed to initialize Supabase:', e);
@@ -841,8 +848,18 @@ function startSupabaseRealtime() {
                 sendToRenderer('supabase-template-change', formattedPayload);
             }
         )
-        .subscribe((status) => {
+        .subscribe((status, err) => {
             console.log('Realtime subscription status:', status);
+            if (err) {
+                console.error('Realtime subscription error:', err);
+            }
+            if (status === 'SUBSCRIBED') {
+                console.log('✓ Realtime connected and listening for template changes');
+            } else if (status === 'CHANNEL_ERROR') {
+                console.error('Realtime channel error - check RLS policies');
+            } else if (status === 'TIMED_OUT') {
+                console.error('Realtime connection timed out');
+            }
         });
 }
 

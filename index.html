@@ -1623,6 +1623,7 @@
     </div>
 
     <script>
+        console.log('=== Folder Architect Script Starting ===');
         // ===== SUPABASE CONFIG =====
         const SUPABASE_URL = 'https://gnlcckcehekjacewihvc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdubGNja2NlaGVramFjZXdpaHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDQ1MDUsImV4cCI6MjA4MTkyMDUwNX0.R7f1Qq3l7s2R_IlA_G7NErhWNi_ci2uXT42XO3K-CG8';
@@ -1643,8 +1644,14 @@
                     auth: {
                         detectSessionInUrl: true,
                         flowType: 'implicit'
+                    },
+                    realtime: {
+                        params: {
+                            eventsPerSecond: 10
+                        }
                     }
                 });
+                console.log('Supabase client initialized');
                 return true;
             } catch (e) {
                 console.error('Failed to initialize Supabase:', e);
@@ -1902,6 +1909,8 @@
             // Stop existing subscription first
             stopRealtimeSync();
 
+            console.log('Starting realtime sync for user:', currentUser.id);
+
             realtimeSubscription = supabaseClient
                 .channel('templates-changes-' + Date.now())
                 .on(
@@ -1912,9 +1921,24 @@
                         table: 'templates',
                         filter: `user_id=eq.${currentUser.id}`
                     },
-                    (payload) => handleRealtimeChange(payload)
+                    (payload) => {
+                        console.log('Realtime event received:', payload);
+                        handleRealtimeChange(payload);
+                    }
                 )
-                .subscribe();
+                .subscribe((status, err) => {
+                    console.log('Realtime subscription status:', status);
+                    if (err) {
+                        console.error('Realtime subscription error:', err);
+                    }
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✓ Realtime connected and listening for template changes');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('Realtime channel error - check RLS policies');
+                    } else if (status === 'TIMED_OUT') {
+                        console.error('Realtime connection timed out');
+                    }
+                });
         }
 
         function stopRealtimeSync() {
@@ -3695,6 +3719,8 @@
 
         // ===== INITIALIZATION =====
         async function init() {
+            console.log('Folder Architect initializing...');
+
             // Check for desktop OAuth callback early (before URL gets cleaned up)
             const isDesktopAuth = checkDesktopAuthCallback();
 
@@ -3710,7 +3736,9 @@
 
             // Initialize Supabase (optional - app works without it)
             try {
+                console.log('Attempting Supabase init...');
                 if (initSupabase()) {
+                    console.log('Supabase init successful, setting up auth listener...');
                     // Set up auth state listener
                     supabaseClient.auth.onAuthStateChange(async (event, session) => {
                         try {
@@ -3745,7 +3773,9 @@
 
                     // Check for existing session
                     try {
+                        console.log('Checking for existing session...');
                         const { data: { session } } = await supabaseClient.auth.getSession();
+                        console.log('Session result:', session ? 'User logged in' : 'No session');
                         if (session?.user) {
                             currentUser = session.user;
                             updateAuthUI();
