@@ -1795,15 +1795,21 @@
             setSyncStatus('syncing', 'Syncing...');
 
             try {
-                console.log('Fetching templates from cloud...');
+                console.log('Fetching templates from cloud for user:', currentUser.id);
+                const startTime = Date.now();
                 const { data, error } = await supabaseClient
                     .from('templates')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('updated_at', { ascending: false });
 
-                console.log('Cloud templates fetched:', data?.length || 0, 'templates', error);
-                if (error) throw error;
+                console.log('Query completed in', Date.now() - startTime, 'ms');
+                console.log('Cloud templates fetched:', data?.length || 0, 'templates');
+                if (error) {
+                    console.error('Supabase query error:', error);
+                    throw error;
+                }
+                console.log('Templates:', JSON.stringify(data));
 
                 // Merge cloud templates with local
                 let syncCount = 0;
