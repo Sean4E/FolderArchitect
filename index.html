@@ -1896,8 +1896,13 @@
         function startRealtimeSync() {
             if (!supabaseClient || !currentUser) return;
 
+            // Stop existing subscription first
+            stopRealtimeSync();
+
+            console.log('Starting realtime sync for user:', currentUser.id);
+
             realtimeSubscription = supabaseClient
-                .channel('templates-changes')
+                .channel('templates-changes-' + Date.now())
                 .on(
                     'postgres_changes',
                     {
@@ -1906,9 +1911,17 @@
                         table: 'templates',
                         filter: `user_id=eq.${currentUser.id}`
                     },
-                    (payload) => handleRealtimeChange(payload)
+                    (payload) => {
+                        console.log('Realtime event received:', payload);
+                        handleRealtimeChange(payload);
+                    }
                 )
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Realtime subscription status:', status);
+                    if (status === 'SUBSCRIBED') {
+                        console.log('Successfully subscribed to realtime changes');
+                    }
+                });
         }
 
         function stopRealtimeSync() {
@@ -1920,6 +1933,7 @@
 
         function handleRealtimeChange(payload) {
             const { eventType, new: newRecord, old: oldRecord } = payload;
+            console.log('Handling realtime change:', eventType, newRecord || oldRecord);
 
             if (eventType === 'INSERT' || eventType === 'UPDATE') {
                 const template = {

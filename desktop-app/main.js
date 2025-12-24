@@ -816,8 +816,13 @@ ipcMain.handle('supabase-delete-template', async (event, templateId) => {
 function startSupabaseRealtime() {
     if (!supabase || !currentUser) return;
 
+    // Stop existing subscription first
+    stopSupabaseRealtime();
+
+    console.log('Starting Supabase realtime for user:', currentUser.id);
+
     realtimeSubscription = supabase
-        .channel('templates-changes')
+        .channel('templates-changes-' + Date.now())
         .on(
             'postgres_changes',
             {
@@ -827,10 +832,18 @@ function startSupabaseRealtime() {
                 filter: `user_id=eq.${currentUser.id}`
             },
             (payload) => {
-                sendToRenderer('supabase-template-change', payload);
+                console.log('Realtime event received:', payload);
+                // Format payload for renderer
+                const formattedPayload = {
+                    eventType: payload.eventType,
+                    record: payload.new || payload.old
+                };
+                sendToRenderer('supabase-template-change', formattedPayload);
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log('Realtime subscription status:', status);
+        });
 }
 
 function stopSupabaseRealtime() {
