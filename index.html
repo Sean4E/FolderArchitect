@@ -1786,17 +1786,23 @@
 
         // ===== CLOUD SYNC FUNCTIONS =====
         async function loadCloudTemplates() {
-            if (!supabaseClient || !currentUser) return;
+            console.log('loadCloudTemplates called');
+            if (!supabaseClient || !currentUser) {
+                console.log('loadCloudTemplates: no client or user');
+                return;
+            }
 
             setSyncStatus('syncing', 'Syncing...');
 
             try {
+                console.log('Fetching templates from cloud...');
                 const { data, error } = await supabaseClient
                     .from('templates')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .order('updated_at', { ascending: false });
 
+                console.log('Cloud templates fetched:', data?.length || 0, 'templates', error);
                 if (error) throw error;
 
                 // Merge cloud templates with local
@@ -1828,17 +1834,17 @@
                     }
                 });
 
-                // Upload local templates that don't exist in cloud
-                for (const local of customTemplates) {
-                    const inCloud = data.find(t => t.id === local.id);
-                    if (!inCloud) {
-                        await uploadTemplateToCloud(local);
-                    }
-                }
+                // Upload local templates that don't exist in cloud (don't block on this)
+                const uploadsNeeded = customTemplates.filter(local => !data.find(t => t.id === local.id));
+                console.log('Local templates to upload:', uploadsNeeded.length);
+                uploadsNeeded.forEach(local => {
+                    uploadTemplateToCloud(local).catch(e => console.error('Upload error:', e));
+                });
 
                 saveCustomTemplates();
                 renderTemplates();
                 setSyncStatus('connected', 'Cloud synced');
+                console.log('loadCloudTemplates complete');
 
                 if (syncCount > 0) {
                     showToast(`Synced ${syncCount} template(s) from cloud`);
