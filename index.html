@@ -3305,7 +3305,7 @@
                         structure: template.structure,
                         updated_at: new Date().toISOString()
                     })
-                    .eq('local_id', template.id)
+                    .eq('id', template.id)
                     .eq('user_id', currentUser.id);
 
                 if (error) {

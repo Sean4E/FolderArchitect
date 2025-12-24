@@ -789,7 +789,7 @@ ipcMain.handle('supabase-update-template', async (event, template) => {
                 structure: template.structure,
                 updated_at: new Date(template.updatedAt || Date.now()).toISOString()
             })
-            .eq('local_id', template.id)
+            .eq('id', template.id)
             .eq('user_id', currentUser.id);
         if (error) return { error: error.message };
         return { success: true };
@@ -804,7 +804,7 @@ ipcMain.handle('supabase-delete-template', async (event, templateId) => {
         const { error } = await supabase
             .from('templates')
             .delete()
-            .eq('local_id', templateId)
+            .eq('id', templateId)
             .eq('user_id', currentUser.id);
         if (error) return { error: error.message };
         return { success: true };
