@@ -1632,7 +1632,12 @@
                 return false;
             }
             try {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: {
+                        detectSessionInUrl: true,
+                        flowType: 'implicit'
+                    }
+                });
                 return true;
             } catch (e) {
                 console.error('Failed to initialize Supabase:', e);
@@ -3521,6 +3526,11 @@
                     // Set up auth state listener
                     supabaseClient.auth.onAuthStateChange(async (event, session) => {
                         try {
+                            // Clean up URL hash after OAuth callback
+                            if (window.location.hash && window.location.hash.includes('access_token')) {
+                                history.replaceState(null, '', window.location.pathname);
+                            }
+
                             if (session?.user) {
                                 currentUser = session.user;
                                 updateAuthUI();
