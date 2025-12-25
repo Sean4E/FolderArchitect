@@ -2060,6 +2060,7 @@
 
             // Real-time template changes
             window.electronAPI.onSupabaseTemplateChange((data) => {
+                console.log('Desktop received realtime event:', data);
                 const { eventType, record } = data;
 
                 if (eventType === 'INSERT' || eventType === 'UPDATE') {
