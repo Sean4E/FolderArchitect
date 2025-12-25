@@ -697,29 +697,113 @@ ipcMain.handle('supabase-signup', async (event, email, password) => {
     }
 });
 
+let authWindow = null;
+
 ipcMain.handle('supabase-signin-google', async () => {
     if (!supabase) return { error: 'Supabase not configured' };
     try {
-        // Auto-start WebSocket server if not running
-        if (!wsServer) {
-            startWebSocketServer(wsPort, wsIdentifier);
+        // Close any existing auth window
+        if (authWindow && !authWindow.isDestroyed()) {
+            authWindow.close();
         }
 
-        // Add desktop flag to redirect URL so web knows to send auth back
-        const redirectUrl = `https://sean4e.github.io/FolderArchitect/?desktop_auth=true&ws_port=${wsPort}`;
+        // Create a popup window for OAuth
+        authWindow = new BrowserWindow({
+            width: 500,
+            height: 700,
+            parent: mainWindow,
+            modal: false,
+            show: false,
+            title: 'Sign in with Google',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true
+            }
+        });
+
+        // Redirect URL that will receive the OAuth callback
+        const redirectUrl = 'https://sean4e.github.io/FolderArchitect/';
 
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: redirectUrl
+                redirectTo: redirectUrl,
+                skipBrowserRedirect: true
             }
         });
+
         if (error) return { error: error.message };
-        // Open the OAuth URL in external browser
+
         if (data?.url) {
-            require('electron').shell.openExternal(data.url);
+            authWindow.loadURL(data.url);
+            authWindow.show();
+
+            // Listen for navigation to catch the OAuth callback
+            authWindow.webContents.on('will-redirect', async (event, url) => {
+                if (url.startsWith(redirectUrl)) {
+                    // Extract the access token from the URL
+                    const urlObj = new URL(url.replace('#', '?')); // Convert hash to query params
+                    const accessToken = urlObj.searchParams.get('access_token');
+                    const refreshToken = urlObj.searchParams.get('refresh_token');
+
+                    if (accessToken && refreshToken) {
+                        // Set the session in Supabase
+                        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken
+                        });
+
+                        if (!sessionError && sessionData.user) {
+                            currentUser = sessionData.user;
+                            sendToRenderer('supabase-auth-change', { user: currentUser });
+                            startSupabaseRealtime();
+                            console.log('OAuth successful, user:', currentUser.email);
+                        }
+                    }
+
+                    // Close the auth window
+                    if (authWindow && !authWindow.isDestroyed()) {
+                        authWindow.close();
+                        authWindow = null;
+                    }
+                }
+            });
+
+            // Also handle when URL changes in address bar (for hash-based callbacks)
+            authWindow.webContents.on('did-navigate', async (event, url) => {
+                if (url.includes('#access_token=')) {
+                    const hashParams = new URLSearchParams(url.split('#')[1]);
+                    const accessToken = hashParams.get('access_token');
+                    const refreshToken = hashParams.get('refresh_token');
+
+                    if (accessToken && refreshToken) {
+                        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken
+                        });
+
+                        if (!sessionError && sessionData.user) {
+                            currentUser = sessionData.user;
+                            sendToRenderer('supabase-auth-change', { user: currentUser });
+                            startSupabaseRealtime();
+                            console.log('OAuth successful, user:', currentUser.email);
+                        }
+                    }
+
+                    // Close the auth window
+                    if (authWindow && !authWindow.isDestroyed()) {
+                        authWindow.close();
+                        authWindow = null;
+                    }
+                }
+            });
+
+            authWindow.on('closed', () => {
+                authWindow = null;
+            });
         }
-        return { success: true, message: 'Complete sign-in in your browser - you will be signed in automatically' };
+
+        return { success: true, message: 'Complete sign-in in the popup window' };
     } catch (e) {
         return { error: e.message };
     }
