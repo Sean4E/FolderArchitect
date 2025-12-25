@@ -768,6 +768,7 @@ ipcMain.handle('supabase-load-templates', async () => {
 ipcMain.handle('supabase-upload-template', async (event, template) => {
     if (!supabase || !currentUser) return { error: 'Not authenticated' };
     try {
+        console.log('Uploading template to Supabase:', template.name);
         const { error } = await supabase
             .from('templates')
             .upsert({
@@ -778,9 +779,14 @@ ipcMain.handle('supabase-upload-template', async (event, template) => {
                 structure: template.structure,
                 updated_at: new Date(template.updatedAt || Date.now()).toISOString()
             }, { onConflict: 'id' });
-        if (error) return { error: error.message };
+        if (error) {
+            console.error('Supabase upload error:', error);
+            return { error: error.message };
+        }
+        console.log('Template uploaded successfully:', template.name);
         return { success: true };
     } catch (e) {
+        console.error('Upload exception:', e);
         return { error: e.message };
     }
 });
@@ -788,6 +794,7 @@ ipcMain.handle('supabase-upload-template', async (event, template) => {
 ipcMain.handle('supabase-update-template', async (event, template) => {
     if (!supabase || !currentUser) return { error: 'Not authenticated' };
     try {
+        console.log('Updating template in Supabase:', template.name);
         const { error } = await supabase
             .from('templates')
             .update({
