@@ -2406,7 +2406,7 @@
             toast.className = `toast ${type}`;
             toast.innerHTML = `
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    ${type === 'success' 
+                    ${type === 'success'
                         ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
                         : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'
                     }
@@ -2415,6 +2415,63 @@
             `;
             container.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Show success banner for desktop auth
+        function showDesktopAuthSuccess() {
+            // Create a success banner at top of page
+            const banner = document.createElement('div');
+            banner.id = 'desktopAuthBanner';
+            banner.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                padding: 20px;
+                text-align: center;
+                z-index: 10000;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                animation: slideDown 0.3s ease-out;
+            `;
+            banner.innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">Signed in to Desktop App</div>
+                    <div style="opacity: 0.9; margin-bottom: 16px;">You can close this tab and return to the desktop app, or continue using the web version.</div>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button onclick="window.close(); document.getElementById('desktopAuthBanner').remove();" style="
+                            background: white;
+                            color: #059669;
+                            border: none;
+                            padding: 10px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">Close Tab</button>
+                        <button onclick="document.getElementById('desktopAuthBanner').remove();" style="
+                            background: rgba(255,255,255,0.2);
+                            color: white;
+                            border: 1px solid rgba(255,255,255,0.3);
+                            padding: 10px 24px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 14px;
+                        ">Continue on Web</button>
+                    </div>
+                </div>
+            `;
+            document.body.prepend(banner);
+
+            // Add animation style
+            if (!document.getElementById('bannerAnimStyle')) {
+                const style = document.createElement('style');
+                style.id = 'bannerAnimStyle';
+                style.textContent = '@keyframes slideDown { from { transform: translateY(-100%); } to { transform: translateY(0); } }';
+                document.head.appendChild(style);
+            }
         }
 
         // ===== FOLDER OPERATIONS =====
@@ -2827,8 +2884,9 @@
                     // Send pending auth session
                     if (pendingDesktopAuth) {
                         sendAuthSessionToDesktop(pendingDesktopAuth);
-                        showToast('Signed in! You can now close this tab and return to the desktop app.', 'success');
                         pendingDesktopAuth = null;
+                        // Show success message and offer to close
+                        showDesktopAuthSuccess();
                     }
                 };
 
