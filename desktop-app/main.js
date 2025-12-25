@@ -39,10 +39,12 @@ function initSupabase() {
             realtime: {
                 params: {
                     eventsPerSecond: 10
-                }
+                },
+                // CRITICAL: Node.js needs WebSocket implementation for realtime
+                transport: WebSocket
             }
         });
-        console.log('Supabase client initialized');
+        console.log('Supabase client initialized with WebSocket transport');
         return true;
     } catch (e) {
         console.error('Failed to initialize Supabase:', e);
