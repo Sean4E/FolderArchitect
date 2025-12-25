@@ -1292,21 +1292,28 @@
             <!-- Sync with Desktop -->
             <div class="panel-footer" style="padding: 12px; border-top: 1px solid var(--border); margin-top: auto;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync</div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Desktop</div>
                     <div class="ws-status disconnected" id="wsStatus" style="font-size: 10px;">
                         <span class="ws-dot" style="width: 6px; height: 6px;"></span>
-                        <span>Disconnected</span>
+                        <span id="wsStatusText">Not Connected</span>
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="flex: 1; padding: 6px 8px; font-size: 12px;">
-                </div>
-                <button class="btn btn-sm" onclick="toggleWSConnection()" id="wsConnectBtn" style="width: 100%;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polygon points="10 8 16 12 10 16 10 8"/>
+                <button class="btn btn-sm" onclick="toggleWSConnection()" id="wsConnectBtn" style="width: 100%; margin-bottom: 6px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px" id="wsConnectIcon">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
                     </svg>
-                    Connect to Desktop
+                    <span id="wsConnectBtnText">Connect to Desktop</span>
+                </button>
+                <div id="wsAdvanced" style="display: none;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span style="font-size: 10px; color: var(--text-dim);">Port:</span>
+                        <input type="number" class="input-field" id="wsPort" value="9876" style="flex: 1; padding: 4px 6px; font-size: 11px;">
+                    </div>
+                </div>
+                <button class="btn-link" onclick="toggleWSAdvanced()" style="font-size: 10px; color: var(--text-dim); margin-top: 4px; background: none; border: none; cursor: pointer; text-decoration: underline;">
+                    Advanced
                 </button>
                 <input type="hidden" id="wsHost" value="localhost">
             </div>
@@ -1623,7 +1630,6 @@
     </div>
 
     <script>
-        console.log('=== Folder Architect Script Starting ===');
         // ===== SUPABASE CONFIG =====
         const SUPABASE_URL = 'https://gnlcckcehekjacewihvc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdubGNja2NlaGVramFjZXdpaHZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDQ1MDUsImV4cCI6MjA4MTkyMDUwNX0.R7f1Qq3l7s2R_IlA_G7NErhWNi_ci2uXT42XO3K-CG8';
@@ -1909,8 +1915,6 @@
             // Stop existing subscription first
             stopRealtimeSync();
 
-            console.log('Starting realtime sync for user:', currentUser.id);
-
             realtimeSubscription = supabaseClient
                 .channel('templates-changes-' + Date.now())
                 .on(
@@ -1922,18 +1926,14 @@
                         filter: `user_id=eq.${currentUser.id}`
                     },
                     (payload) => {
-                        console.log('Realtime event received:', payload);
                         handleRealtimeChange(payload);
                     }
                 )
                 .subscribe((status, err) => {
-                    console.log('Realtime subscription status:', status);
                     if (err) {
                         console.error('Realtime subscription error:', err);
                     }
-                    if (status === 'SUBSCRIBED') {
-                        console.log('✓ Realtime connected and listening for template changes');
-                    } else if (status === 'CHANNEL_ERROR') {
+                    if (status === 'CHANNEL_ERROR') {
                         console.error('Realtime channel error - check RLS policies');
                     } else if (status === 'TIMED_OUT') {
                         console.error('Realtime connection timed out');
@@ -2970,21 +2970,78 @@
             }
         }
 
-        function updateWSStatus(connected) {
+        function updateWSStatus(connected, identifier = '') {
             const statusEl = document.getElementById('wsStatus');
+            const statusTextEl = document.getElementById('wsStatusText');
             const btnEl = document.getElementById('wsConnectBtn');
+            const btnTextEl = document.getElementById('wsConnectBtnText');
 
             if (connected) {
                 statusEl.className = 'ws-status connected';
-                statusEl.innerHTML = '<span class="ws-dot" style="width: 6px; height: 6px;"></span><span>Connected</span>';
-                btnEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Disconnect`;
+                statusTextEl.textContent = 'Connected';
+                btnTextEl.textContent = 'Disconnect';
                 btnEl.classList.add('btn-danger');
             } else {
                 statusEl.className = 'ws-status disconnected';
-                statusEl.innerHTML = '<span class="ws-dot" style="width: 6px; height: 6px;"></span><span>Disconnected</span>';
-                btnEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg> Connect to Desktop`;
+                statusTextEl.textContent = 'Not Connected';
+                btnTextEl.textContent = 'Connect to Desktop';
                 btnEl.classList.remove('btn-danger');
             }
+        }
+
+        function toggleWSAdvanced() {
+            const advEl = document.getElementById('wsAdvanced');
+            advEl.style.display = advEl.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Auto-connect to desktop on page load
+        function autoConnectToDesktop() {
+            // Don't auto-connect if already connected or if this is a desktop auth callback
+            if (wsConnection) return;
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('desktop_auth') === 'true') return;
+
+            // Try to connect silently
+            const port = document.getElementById('wsPort').value || '9876';
+            const wsUrl = `ws://localhost:${port}`;
+
+            try {
+                const testWs = new WebSocket(wsUrl);
+                testWs.onopen = () => {
+                    wsConnection = testWs;
+                    updateWSStatus(true);
+                    setupWSHandlers(testWs);
+                };
+                testWs.onerror = () => {
+                    // Silent fail - desktop not running
+                    testWs.close();
+                };
+                testWs.onclose = () => {
+                    if (wsConnection === testWs) {
+                        wsConnection = null;
+                        updateWSStatus(false);
+                    }
+                };
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        function setupWSHandlers(ws) {
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWSMessage(data);
+                } catch (e) {
+                    console.error('WS message error:', e);
+                }
+            };
+            ws.onclose = () => {
+                if (wsConnection === ws) {
+                    wsConnection = null;
+                    updateWSStatus(false);
+                }
+            };
         }
 
         function handleWSMessage(data) {
@@ -3795,6 +3852,9 @@
             restorePanelState();
             restoreWSSettings();
             setupPanelClickExpand();
+
+            // Try to auto-connect to desktop app if running
+            setTimeout(autoConnectToDesktop, 500);
 
             // Initialize Supabase (optional - app works without it)
             try {

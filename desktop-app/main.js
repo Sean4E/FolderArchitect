@@ -835,15 +835,11 @@ ipcMain.handle('supabase-delete-template', async (event, templateId) => {
 let realtimeStatus = 'DISCONNECTED';
 
 function startSupabaseRealtime() {
-    if (!supabase || !currentUser) {
-        console.log('Cannot start realtime: supabase=', !!supabase, 'currentUser=', !!currentUser);
-        return;
-    }
+    if (!supabase || !currentUser) return;
 
     // Stop existing subscription first
     stopSupabaseRealtime();
 
-    console.log('Starting Supabase realtime for user:', currentUser.id);
     realtimeStatus = 'CONNECTING';
 
     realtimeSubscription = supabase
@@ -857,11 +853,6 @@ function startSupabaseRealtime() {
                 filter: `user_id=eq.${currentUser.id}`
             },
             (payload) => {
-                console.log('=== REALTIME EVENT FROM SUPABASE ===');
-                console.log('Event type:', payload.eventType);
-                console.log('New data:', payload.new);
-                console.log('Old data:', payload.old);
-                // Format payload for renderer
                 const formattedPayload = {
                     eventType: payload.eventType,
                     record: payload.new || payload.old
@@ -871,15 +862,11 @@ function startSupabaseRealtime() {
         )
         .subscribe((status, err) => {
             realtimeStatus = status;
-            console.log('Realtime subscription status:', status);
-            // Also send status to renderer for debugging
             sendToRenderer('realtime-status', { status, error: err?.message });
             if (err) {
                 console.error('Realtime subscription error:', err);
             }
-            if (status === 'SUBSCRIBED') {
-                console.log('✓ Desktop realtime connected and listening for template changes');
-            } else if (status === 'CHANNEL_ERROR') {
+            if (status === 'CHANNEL_ERROR') {
                 console.error('Realtime channel error - check RLS policies');
             } else if (status === 'TIMED_OUT') {
                 console.error('Realtime connection timed out');

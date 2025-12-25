@@ -1477,7 +1477,7 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="ws-status disconnected" id="wsStatus">
                         <span class="ws-dot"></span>
-                        <span>Offline</span>
+                        <span id="wsStatusText">Not Connected</span>
                     </div>
                     <button class="collapse-btn" onclick="togglePanel('leftPanel')" title="Collapse panel">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1489,18 +1489,32 @@
             <div class="panel-content" id="templatesPanel">
                 <!-- Templates will be populated by JS -->
             </div>
-            <!-- Sync -->
+            <!-- Web Connection -->
             <div class="panel-footer" style="padding: 12px; border-top: 1px solid var(--border); margin-top: auto;">
-                <div style="margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Sync</div>
-                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                    <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="flex: 1; padding: 6px 8px; font-size: 12px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Web</div>
+                    <div class="ws-status disconnected" id="wsStatusFooter" style="font-size: 10px;">
+                        <span class="ws-dot" style="width: 6px; height: 6px;"></span>
+                        <span id="wsStatusFooterText">Not Connected</span>
+                    </div>
                 </div>
-                <button class="btn btn-sm" onclick="toggleWSServer()" id="wsToggleBtn" style="width: 100%; margin-bottom: 8px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polygon points="10 8 16 12 10 16 10 8"/>
+                <button class="btn btn-sm" onclick="toggleWSServer()" id="wsToggleBtn" style="width: 100%; margin-bottom: 6px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px" id="wsToggleIcon">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v10"/>
+                        <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"/>
+                        <path d="M1 12h6m6 0h10"/>
+                        <path d="M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
                     </svg>
-                    Start Sync Server
+                    <span id="wsToggleBtnText">Enable Web Connection</span>
+                </button>
+                <div id="wsAdvanced" style="display: none;">
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
+                        <input type="number" class="input-field" id="wsPort" placeholder="Port" value="9876" style="flex: 1; padding: 6px 8px; font-size: 12px;">
+                    </div>
+                </div>
+                <button class="btn btn-sm" onclick="toggleWSAdvanced()" style="width: 100%; background: transparent; border: none; color: var(--text-dim); font-size: 10px; padding: 4px;">
+                    Advanced
                 </button>
                 <input type="hidden" id="wsIdentifier" value="default">
             </div>
@@ -2060,19 +2074,13 @@
 
             // Realtime status updates from main process
             window.electronAPI.onRealtimeStatus((data) => {
-                console.log('Desktop realtime status:', data.status, data.error || '');
+                if (data.error) console.error('Realtime error:', data.error);
             });
 
             // Real-time template changes
             window.electronAPI.onSupabaseTemplateChange((data) => {
-                console.log('=== DESKTOP RECEIVED REALTIME EVENT ===', data);
                 const { eventType, record } = data;
-                console.log('Event type:', eventType, 'Record:', record);
-
-                if (!record) {
-                    console.log('No record in payload, skipping');
-                    return;
-                }
+                if (!record) return;
 
                 if (eventType === 'INSERT' || eventType === 'UPDATE') {
                     const template = {
@@ -2082,21 +2090,15 @@
                         structure: record.structure,
                         updatedAt: new Date(record.updated_at).getTime()
                     };
-                    console.log('Parsed template:', template);
 
                     const existing = customTemplates.find(t => t.id === template.id);
-                    console.log('Existing template:', existing);
 
                     if (!existing) {
                         customTemplates.push(template);
-                        console.log('Added new template');
                         showToast(`Template synced: ${template.name}`);
                     } else if (template.updatedAt > (existing.updatedAt || 0)) {
                         Object.assign(existing, template);
-                        console.log('Updated existing template');
                         showToast(`Template updated: ${template.name}`);
-                    } else {
-                        console.log('Template not newer, skipping update');
                     }
 
                     saveCustomTemplates();
@@ -2110,8 +2112,6 @@
                         renderTemplates();
                         showToast(`Template removed: ${name}`);
                     }
-                } else {
-                    console.log('Unknown event type:', eventType);
                 }
             });
 
@@ -3279,6 +3279,11 @@
         }
 
         // ===== WEBSOCKET SERVER TOGGLE =====
+        function toggleWSAdvanced() {
+            const advancedEl = document.getElementById('wsAdvanced');
+            advancedEl.style.display = advancedEl.style.display === 'none' ? 'block' : 'none';
+        }
+
         async function toggleWSServer() {
             if (typeof window.electronAPI === 'undefined') {
                 showToast('WebSocket only available in desktop app', 'warning');
@@ -4011,31 +4016,54 @@
             // WebSocket status updates
             let wsServerRunning = false;
 
-            window.electronAPI.onWSStatus((status) => {
+            function updateWSStatus(connected, port = '') {
+                // Update header status
                 const wsStatusEl = document.getElementById('wsStatus');
+                const wsStatusTextEl = document.getElementById('wsStatusText');
+                // Update footer status
+                const wsStatusFooterEl = document.getElementById('wsStatusFooter');
+                const wsStatusFooterTextEl = document.getElementById('wsStatusFooterText');
+                // Update button
+                const wsToggleBtnTextEl = document.getElementById('wsToggleBtnText');
                 const wsToggleBtn = document.getElementById('wsToggleBtn');
 
+                if (connected) {
+                    // Header
+                    wsStatusEl.className = 'ws-status connected';
+                    wsStatusTextEl.textContent = 'Connected';
+                    // Footer
+                    wsStatusFooterEl.className = 'ws-status connected';
+                    wsStatusFooterTextEl.textContent = 'Connected';
+                    // Button
+                    wsToggleBtnTextEl.textContent = 'Disable Web Connection';
+                    wsToggleBtn.classList.add('btn-danger');
+                    wsToggleBtn.classList.remove('btn-success');
+                } else {
+                    // Header
+                    wsStatusEl.className = 'ws-status disconnected';
+                    wsStatusTextEl.textContent = 'Not Connected';
+                    // Footer
+                    wsStatusFooterEl.className = 'ws-status disconnected';
+                    wsStatusFooterTextEl.textContent = 'Not Connected';
+                    // Button
+                    wsToggleBtnTextEl.textContent = 'Enable Web Connection';
+                    wsToggleBtn.classList.remove('btn-danger');
+                }
+            }
+
+            window.electronAPI.onWSStatus((status) => {
                 if (status.status === 'started') {
                     wsServerRunning = true;
-                    wsStatusEl.className = 'ws-status connected';
-                    wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>WS:' + status.port + '</span>';
-                    if (wsToggleBtn) {
-                        wsToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop Server`;
-                        wsToggleBtn.classList.add('btn-danger');
-                    }
-                    showToast('Sync server started on port ' + status.port);
+                    updateWSStatus(true, status.port);
+                    showToast('Web connection enabled on port ' + status.port, 'success');
                 } else if (status.status === 'stopped') {
                     wsServerRunning = false;
-                    wsStatusEl.className = 'ws-status disconnected';
-                    wsStatusEl.innerHTML = '<span class="ws-dot"></span><span>Offline</span>';
-                    if (wsToggleBtn) {
-                        wsToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> Start Sync Server`;
-                        wsToggleBtn.classList.remove('btn-danger');
-                    }
+                    updateWSStatus(false);
                 } else if (status.status === 'error') {
-                    showToast('WebSocket error: ' + status.error, 'error');
+                    showToast('Connection error: ' + status.error, 'error');
                 } else if (status.status === 'already-running') {
-                    showToast('Server already running on port ' + status.port, 'warning');
+                    wsServerRunning = true;
+                    updateWSStatus(true, status.port);
                 }
             });
 
