@@ -28,3 +28,7 @@ BACKUP/
 
 # Deploy logs
 deploy_log.txt
+
+# Supabase credentials
+Supabase/
+supabase-config.js
