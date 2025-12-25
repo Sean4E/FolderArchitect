@@ -3385,7 +3385,8 @@
             if (!supabaseClient || !currentUser) return;
 
             try {
-                const { error } = await supabaseClient
+                console.log('Updating template in Supabase:', template.name, template.id);
+                const { data, error } = await supabaseClient
                     .from('templates')
                     .update({
                         name: template.name,
@@ -3394,10 +3395,13 @@
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', template.id)
-                    .eq('user_id', currentUser.id);
+                    .eq('user_id', currentUser.id)
+                    .select();
 
                 if (error) {
                     console.error('Failed to update template in cloud:', error);
+                } else {
+                    console.log('Template updated in Supabase successfully:', data);
                 }
             } catch (e) {
                 console.error('Cloud update error:', e);

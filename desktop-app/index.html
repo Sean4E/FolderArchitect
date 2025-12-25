@@ -2067,6 +2067,12 @@
             window.electronAPI.onSupabaseTemplateChange((data) => {
                 console.log('=== DESKTOP RECEIVED REALTIME EVENT ===', data);
                 const { eventType, record } = data;
+                console.log('Event type:', eventType, 'Record:', record);
+
+                if (!record) {
+                    console.log('No record in payload, skipping');
+                    return;
+                }
 
                 if (eventType === 'INSERT' || eventType === 'UPDATE') {
                     const template = {
@@ -2076,14 +2082,21 @@
                         structure: record.structure,
                         updatedAt: new Date(record.updated_at).getTime()
                     };
+                    console.log('Parsed template:', template);
 
                     const existing = customTemplates.find(t => t.id === template.id);
+                    console.log('Existing template:', existing);
+
                     if (!existing) {
                         customTemplates.push(template);
+                        console.log('Added new template');
                         showToast(`Template synced: ${template.name}`);
                     } else if (template.updatedAt > (existing.updatedAt || 0)) {
                         Object.assign(existing, template);
+                        console.log('Updated existing template');
                         showToast(`Template updated: ${template.name}`);
+                    } else {
+                        console.log('Template not newer, skipping update');
                     }
 
                     saveCustomTemplates();
@@ -2097,6 +2110,8 @@
                         renderTemplates();
                         showToast(`Template removed: ${name}`);
                     }
+                } else {
+                    console.log('Unknown event type:', eventType);
                 }
             });
 
