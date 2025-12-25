@@ -2058,9 +2058,14 @@
                 }
             });
 
+            // Realtime status updates from main process
+            window.electronAPI.onRealtimeStatus((data) => {
+                console.log('Desktop realtime status:', data.status, data.error || '');
+            });
+
             // Real-time template changes
             window.electronAPI.onSupabaseTemplateChange((data) => {
-                console.log('Desktop received realtime event:', data);
+                console.log('=== DESKTOP RECEIVED REALTIME EVENT ===', data);
                 const { eventType, record } = data;
 
                 if (eventType === 'INSERT' || eventType === 'UPDATE') {

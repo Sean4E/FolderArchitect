@@ -67,6 +67,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     supabaseDeleteTemplate: (templateId) => ipcRenderer.invoke('supabase-delete-template', templateId),
     onSupabaseAuthChange: (callback) => ipcRenderer.on('supabase-auth-change', (event, data) => callback(data)),
     onSupabaseTemplateChange: (callback) => ipcRenderer.on('supabase-template-change', (event, data) => callback(data)),
+    onRealtimeStatus: (callback) => ipcRenderer.on('realtime-status', (event, data) => callback(data)),
 
     // Platform info
     platform: process.platform
